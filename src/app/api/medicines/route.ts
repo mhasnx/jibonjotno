@@ -2,6 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
+let cachedCatalog: any[] | null = null;
+
+async function loadDataset() {
+  if (cachedCatalog && cachedCatalog.length > 0) {
+    return cachedCatalog;
+  }
+
+  // 1. Local file JSON check
+  try {
+    const filePath = path.join(process.cwd(), "public", "data", "all_medicines.json");
+    if (fs.existsSync(filePath)) {
+      const fileData = fs.readFileSync(filePath, "utf8");
+      if (!fileData.startsWith("version https://git-lfs")) {
+        cachedCatalog = JSON.parse(fileData);
+        return cachedCatalog;
+      }
+    }
+  } catch (err) {
+    console.error("Local read skipped:", err);
+  }
+
+  // 2. Fetch directly from GitHub LFS Media CDN if local file is a Git LFS pointer text
+  try {
+    const cdnUrl = "https://media.githubusercontent.com/media/mhasnx/JibonJotno/main/public/data/all_medicines.json";
+    const res = await fetch(cdnUrl, { next: { revalidate: 86400 } });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        cachedCatalog = data;
+        return cachedCatalog;
+      }
+    }
+  } catch (err) {
+    console.error("GitHub LFS CDN fetch failed:", err);
+  }
+
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -10,13 +49,11 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "24", 10);
 
-    const filePath = path.join(process.cwd(), "public", "data", "all_medicines.json");
-    if (!fs.existsSync(filePath)) {
+    const catalog = await loadDataset();
+
+    if (!catalog || catalog.length === 0) {
       return NextResponse.json({ items: [], total: 0 });
     }
-
-    const fileData = fs.readFileSync(filePath, "utf8");
-    const catalog = JSON.parse(fileData);
 
     let filtered = catalog;
 
@@ -41,6 +78,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items: paginatedItems, total });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to read dataset" }, { status: 500 });
+    return NextResponse.json({ error: "API Server Error" }, { status: 500 });
   }
 }
