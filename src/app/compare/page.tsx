@@ -1,194 +1,285 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import PublicNavbar from "@/components/layout/PublicNavbar";
 import { useLanguage } from "@/context/LanguageContext";
+import { useCart } from "@/context/CartContext";
+import { MASTER_CATALOG, CatalogItem } from "@/data/medicinesCatalog";
+import MedicinePackagingModal from "@/components/medicines/MedicinePackagingModal";
 
-const GENERIC_COMPARISONS = [
-  {
-    generic: "Esomeprazole (20 mg)",
-    keyword: "Esomeprazole",
-    useBn: "গ্যাস্ট্রিক আলসার ও এসিডিটি নিয়ন্ত্রণ",
-    useEn: "Gastric ulcer & acid reflux management",
-    brands: [
-      { name: "Sergel 20", company: "Healthcare Pharma", form: "Capsule", price: 7.00 },
-      { name: "Maxpro 20", company: "Renata Limited", form: "Tablet", price: 7.00 },
-      { name: "Nexum 20", company: "Square Pharma", form: "Capsule", price: 7.00 },
-      { name: "Esonix 20", company: "Incepta Pharma", form: "Tablet", price: 6.00 },
-      { name: "Opton 20", company: "Beximco Pharma", form: "Capsule", price: 6.50 },
-    ],
-  },
-  {
-    generic: "Cefixime Trihydrate (200 mg)",
-    keyword: "Cefixime",
-    useBn: "টাইফয়েড ও ব্যাকটেরিয়াজনিত সংক্রমণ (অ্যান্টিবায়োটিক)",
-    useEn: "Typhoid & bacterial infections (Antibiotic)",
-    brands: [
-      { name: "Cef-3", company: "Square Pharma", form: "Capsule", price: 35.00 },
-      { name: "3-C", company: "Edruc Limited", form: "Capsule", price: 35.00 },
-      { name: "Denvar 200", company: "Healthcare Pharma", form: "Capsule", price: 35.00 },
-      { name: "Orcef 200", company: "Incepta Pharma", form: "Capsule", price: 32.00 },
-      { name: "T-Cef", company: "Opsonin Pharma", form: "Capsule", price: 30.00 },
-    ],
-  },
-  {
-    generic: "Paracetamol (500 mg)",
-    keyword: "Paracetamol",
-    useBn: "জ্বর, মাথাব্যথা ও সাধারণ ব্যথা নিরাময়",
-    useEn: "Fever, headache & general pain relief",
-    brands: [
-      { name: "Napa", company: "Beximco Pharma", form: "Tablet", price: 1.20 },
-      { name: "Ace", company: "Square Pharma", form: "Tablet", price: 1.20 },
-      { name: "Fast", company: "ACME Laboratories", form: "Tablet", price: 1.20 },
-      { name: "Reset", company: "Incepta Pharma", form: "Tablet", price: 1.15 },
-      { name: "Pyralgin", company: "Renata Limited", form: "Tablet", price: 1.20 },
-    ],
-  },
-  {
-    generic: "Azithromycin (500 mg)",
-    keyword: "Azithromycin",
-    useBn: "শ্বাসনালী ও গলার ইনফেকশন",
-    useEn: "Respiratory tract & throat infections",
-    brands: [
-      { name: "Zimax 500", company: "Square Pharma", form: "Tablet", price: 35.00 },
-      { name: "Azithrocin", company: "Beximco Pharma", form: "Tablet", price: 35.00 },
-      { name: "Tridosil", company: "Incepta Pharma", form: "Tablet", price: 32.00 },
-      { name: "Azin", company: "ACME Laboratories", form: "Tablet", price: 35.00 },
-    ],
-  },
-  {
-    generic: "Calcium + Vitamin D3",
-    keyword: "Vitamin",
-    useBn: "হাড় ক্ষয় ও ক্যালসিয়াম ঘাটতি",
-    useEn: "Osteoporosis & calcium deficiency",
-    brands: [
-      { name: "Calbo-D", company: "Square Pharma", form: "Tablet", price: 7.00 },
-      { name: "Ostocal D", company: "Incepta Pharma", form: "Tablet", price: 7.00 },
-      { name: "Coralcal-D", company: "Healthcare Pharma", form: "Tablet", price: 8.00 },
-      { name: "Sandocal D", company: "Beximco Pharma", form: "Tablet", price: 6.50 },
-    ],
-  },
-];
-
-function CompareContent() {
+function PriceComparisonContent() {
   const searchParams = useSearchParams();
-  const [selectedGeneric, setSelectedGeneric] = useState(GENERIC_COMPARISONS[0]);
+  const initialGeneric = searchParams.get("generic") || "";
   const { t } = useLanguage();
+  const { addToCart } = useCart();
+
+  const [catalog, setCatalog] = useState<CatalogItem[]>(MASTER_CATALOG);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(initialGeneric);
+  const [selectedGeneric, setSelectedGeneric] = useState(
+    initialGeneric || "Esomeprazole Magnesium Trihydrate"
+  );
+  const [selectedMedModal, setSelectedMedModal] = useState<CatalogItem | null>(null);
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
-    const g = searchParams.get("generic");
-    if (g) {
-      const found = GENERIC_COMPARISONS.find(
-        (item) =>
-          item.generic.toLowerCase().includes(g.toLowerCase()) ||
-          item.keyword.toLowerCase().includes(g.toLowerCase())
-      );
-      if (found) setSelectedGeneric(found);
+    setLoading(true);
+    fetch("/data/all_medicines.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCatalog([...MASTER_CATALOG, ...data]);
+        } else {
+          return fetch("/api/medicines?limit=500")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((api) => {
+              if (api && Array.isArray(api.items)) {
+                setCatalog(api.items);
+              }
+            });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Popular Generics list extracted dynamically from 35,941+ catalog
+  const genericGroups = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of catalog) {
+      if (!item.generic) continue;
+      map.set(item.generic, (map.get(item.generic) || 0) + 1);
     }
-  }, [searchParams]);
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 40);
+  }, [catalog]);
+
+  // Matched medicines for comparison
+  const comparedMedicines = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    let list = catalog;
+
+    if (q) {
+      // If user searches a brand name (e.g. Sergel), find its generic first so all alternatives appear!
+      const exactBrand = catalog.find((m) => (m.brand || "").toLowerCase() === q);
+      const targetGen = exactBrand ? exactBrand.generic.toLowerCase() : q;
+
+      list = catalog.filter(
+        (m) =>
+          (m.generic || "").toLowerCase().includes(targetGen) ||
+          (m.brand || "").toLowerCase().includes(q)
+      );
+    } else if (selectedGeneric) {
+      list = catalog.filter(
+        (m) => (m.generic || "").toLowerCase() === selectedGeneric.toLowerCase()
+      );
+    }
+
+    return [...list]
+      .sort((a, b) => (parseFloat(a.priceTk) || 0) - (parseFloat(b.priceTk) || 0))
+      .slice(0, 120);
+  }, [catalog, searchTerm, selectedGeneric]);
+
+  const highestPrice = useMemo(() => {
+    if (comparedMedicines.length === 0) return 0;
+    return Math.max(...comparedMedicines.map((m) => parseFloat(m.priceTk) || 0));
+  }, [comparedMedicines]);
+
+  const lowestPrice = useMemo(() => {
+    if (comparedMedicines.length === 0) return 0;
+    return Math.min(...comparedMedicines.map((m) => parseFloat(m.priceTk) || 0));
+  }, [comparedMedicines]);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 flex-1 w-full">
-      <div className="bg-[#0f4c3a] text-white rounded-3xl p-7 md:p-10 mb-8 shadow-md">
-        <span className="text-xs font-bold uppercase tracking-wider bg-emerald-800 text-emerald-200 px-3 py-1 rounded-full">
-          ⚖️ {t("স্মার্ট জেনেরিক দামের তুলনা", "Smart Generic Price Comparison")}
-        </span>
-        <h1 className="text-2xl md:text-4xl font-extrabold mt-3 mb-2">
-          {t("ঔষধের দামের তুলনা ও বিকল্প ব্র্যান্ড", "Medicine Price Comparison & Alternatives")}
-        </h1>
-        <p className="text-emerald-100/80 text-xs md:text-sm max-w-2xl">
-          {t(
-            "একই জেনেরিক উপাদানের বিভিন্ন কোম্পানির ঔষধের বাজারমূল্য তুলনা করে আপনার সাশ্রয়ী ও নির্ভরযোগ্য বিকল্প বেছে নিন।",
-            "Compare market prices across leading brands sharing identical generics to pick the most economical choice."
-          )}
-        </p>
-      </div>
+    <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 flex-1 w-full space-y-6">
+      {toast && (
+        <div className="fixed bottom-8 right-6 bg-[#0f4c3a] text-white px-5 py-3 rounded-2xl shadow-xl text-xs font-black z-50">
+          ✓ {toast}
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3 h-fit">
-          <h2 className="font-extrabold text-slate-900 text-sm uppercase tracking-wider mb-2">
-            {t("জেনেরিক নির্বাচন করুন", "Select Generic Formula")}
-          </h2>
-          {GENERIC_COMPARISONS.map((item, idx) => (
+      {/* Hero Banner */}
+      <div className="bg-gradient-to-br from-[#0f4c3a] to-[#06231b] text-white rounded-3xl p-6 md:p-9 shadow-xl space-y-4">
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-3 py-1 rounded-full uppercase">
+              35,941+ GENERIC & BRAND PRICE ENGINE
+            </span>
+            <h1 className="text-2xl md:text-3xl font-black mt-2">
+              {t("ওষুধের দামের তুলনা ও সাশ্রয়ী বিকল্প (Price Comparison)", "Medicine Price Comparison & Generic Alternatives")}
+            </h1>
+            <p className="text-xs text-emerald-100 mt-1">
+              একই জেনেরিকের বিভিন্ন কোম্পানির ওষুধের দাম তুলনা করে সাশ্রয়ী ও মানসম্মত বিকল্প বেছে নিন
+            </p>
+          </div>
+          <div className="bg-white/10 border border-white/15 px-4 py-2.5 rounded-2xl text-xs">
+            মোট সংযুক্ত ওষুধ: <strong className="text-amber-300 font-mono">{catalog.length.toLocaleString()}</strong>
+          </div>
+        </div>
+
+        {/* Search Input */}
+        <div className="max-w-3xl bg-white rounded-2xl p-1.5 flex items-center shadow-lg">
+          <span className="pl-3.5 text-slate-400">🔍</span>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="যেকোনো ওষুধের ব্র্যান্ড বা জেনেরিক নাম লিখুন (যেমন: Sergel, Napa, Cefixime, Omeprazole)..."
+            className="w-full px-3 py-2.5 text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none"
+          />
+          {searchTerm && (
             <button
-              key={idx}
-              onClick={() => setSelectedGeneric(item)}
-              className={`w-full text-left p-4 rounded-xl border transition ${
-                selectedGeneric.generic === item.generic
-                  ? "bg-emerald-50 border-emerald-600 text-emerald-950 font-bold"
-                  : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+              onClick={() => setSearchTerm("")}
+              className="px-3 text-xs font-black text-slate-400 hover:text-rose-600 cursor-pointer"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Quick Generic Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {genericGroups.slice(0, 14).map(([genName, count]) => (
+            <button
+              key={genName}
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedGeneric(genName);
+              }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 cursor-pointer transition ${
+                selectedGeneric === genName && !searchTerm
+                  ? "bg-amber-400 text-slate-950 font-black"
+                  : "bg-white/10 text-emerald-100 hover:bg-white/20"
               }`}
             >
-              <div className="font-bold text-sm">{item.generic}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{t(item.useBn, item.useEn)}</div>
+              {genName} ({count})
             </button>
           ))}
         </div>
+      </div>
 
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-100 pb-4 mb-4 gap-2">
-            <div>
-              <h3 className="text-xl font-black text-slate-900">{selectedGeneric.generic}</h3>
-              <p className="text-xs text-slate-500">{t("কাজ:", "Indication:")} {t(selectedGeneric.useBn, selectedGeneric.useEn)}</p>
-            </div>
-            <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full w-fit">
-              {t("সবচেয়ে সাশ্রয়ী দাম হাইলাইট করা হয়েছে", "Lowest Price Highlighted")}
-            </span>
+      {/* Comparison Summary Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-5 rounded-3xl border border-slate-200">
+          <span className="text-[11px] font-bold text-slate-400 uppercase">তুলনাকৃত ব্র্যান্ড সংখ্যা</span>
+          <div className="text-2xl font-black text-slate-900 font-mono mt-1">
+            {comparedMedicines.length} টি ব্র্যান্ড
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200">
-                  <th className="py-3 px-4">{t("ব্র্যান্ডের নাম", "Brand Name")}</th>
-                  <th className="py-3 px-4">{t("কোম্পানি", "Company")}</th>
-                  <th className="py-3 px-4">{t("ধরন", "Dosage Form")}</th>
-                  <th className="py-3 px-4 text-right">{t("প্রতি পিস মূল্য", "Unit Price")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {selectedGeneric.brands.map((b, i) => {
-                  const minPrice = Math.min(...selectedGeneric.brands.map((x) => x.price));
-                  const isCheapest = b.price === minPrice;
-                  return (
-                    <tr key={i} className="hover:bg-slate-50 transition">
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
-                        {b.name}
-                        {isCheapest && (
-                          <span className="ml-2 bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                            {t("সাশ্রয়ী", "Cheapest")}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">{b.company}</td>
-                      <td className="py-3.5 px-4 text-slate-500 text-xs">{b.form}</td>
-                      <td className="py-3.5 px-4 text-right font-black text-[#0f4c3a]">
-                        ৳ {b.price.toFixed(2)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        </div>
+        <div className="bg-emerald-50 p-5 rounded-3xl border border-emerald-200">
+          <span className="text-[11px] font-bold text-emerald-800 uppercase">সর্বনিম্ন ইউনিট মূল্য (Lowest)</span>
+          <div className="text-2xl font-black text-[#0f4c3a] font-mono mt-1">
+            ৳ {lowestPrice.toFixed(2)}
+          </div>
+        </div>
+        <div className="bg-amber-50 p-5 rounded-3xl border border-amber-200">
+          <span className="text-[11px] font-bold text-amber-900 uppercase">সর্বোচ্চ ইউনিট মূল্য (Highest)</span>
+          <div className="text-2xl font-black text-amber-800 font-mono mt-1">
+            ৳ {highestPrice.toFixed(2)}
           </div>
         </div>
       </div>
+
+      {/* Comparison Results List */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 space-y-4 shadow-xs">
+        <h2 className="text-base sm:text-lg font-black text-slate-900">
+          📊 মূল্য তুলনা তালিকা (কম দাম থেকে বেশি দাম অনুসারে সাজানো)
+        </h2>
+
+        {loading && comparedMedicines.length === 0 ? (
+          <div className="py-12 text-center text-sm font-bold text-slate-500">
+            ৩৫,৯৪১+ ওষুধের ডাটাবেজ থেকে দামের তুলনা লোড হচ্ছে...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {comparedMedicines.map((med, index) => {
+              const price = parseFloat(med.priceTk) || 0;
+              const savingsPct =
+                highestPrice > price && highestPrice > 0
+                  ? Math.round(((highestPrice - price) / highestPrice) * 100)
+                  : 0;
+
+              return (
+                <div
+                  key={med.id}
+                  onClick={() => setSelectedMedModal(med)}
+                  className="p-4 rounded-2xl border border-slate-200 hover:border-[#0f4c3a] bg-slate-50/50 hover:bg-white transition flex items-center justify-between gap-4 cursor-pointer group"
+                >
+                  <div className="flex items-center space-x-3.5 min-w-0">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0f4c3a] to-emerald-800 text-white flex flex-col items-center justify-center shrink-0 font-black text-[10px] shadow-xs">
+                      <span>#{index + 1}</span>
+                      <span className="text-[8px] text-amber-300">{med.dosageForm}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm sm:text-base font-black text-slate-900 truncate group-hover:text-[#0f4c3a]">
+                          {med.brand} <span className="text-xs text-slate-500">{med.strength}</span>
+                        </h3>
+                        {savingsPct > 0 && (
+                          <span className="bg-emerald-100 text-emerald-900 text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
+                            {savingsPct}% সাশ্রয়
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-bold text-emerald-800 truncate">🧬 {med.generic}</p>
+                      <p className="text-[11px] text-slate-500 truncate">🏢 {med.company}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="text-base font-black text-[#0f4c3a] font-mono">
+                      ৳ {price.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      পাতা (10): ৳{(price * 10).toFixed(2)}
+                    </div>
+                    <button
+                      onClick={() => {
+                        addToCart({
+                          id: med.id,
+                          name: `${med.brand} (${med.strength})`,
+                          generic: med.generic,
+                          company: med.company,
+                          price,
+                          requiresRx: med.requiresRx,
+                          dosageForm: med.dosageForm,
+                        });
+                        setToast(`${med.brand} ব্যাগে যুক্ত হয়েছে!`);
+                        setTimeout(() => setToast(""), 2500);
+                      }}
+                      className="bg-[#0f4c3a] hover:bg-emerald-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl cursor-pointer"
+                    >
+                      + অর্ডার
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selectedMedModal && (
+        <MedicinePackagingModal
+          medicine={selectedMedModal}
+          allMedicines={catalog}
+          onClose={() => setSelectedMedModal(null)}
+          onSelectAlternative={(alt) => setSelectedMedModal(alt)}
+        />
+      )}
     </main>
   );
 }
 
-export default function PriceComparisonPage() {
+export default function ComparePage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans text-slate-800 pb-16 lg:pb-0">
+    <div className="min-h-screen bg-[#f4f7f6] flex flex-col justify-between font-sans text-slate-800">
       <PublicNavbar />
-      <Suspense fallback={<div className="p-12 text-center text-sm">লোড হচ্ছে...</div>}>
-        <CompareContent />
+      <Suspense fallback={<div className="p-12 text-center">Loading Price Comparison Engine...</div>}>
+        <PriceComparisonContent />
       </Suspense>
-      <footer className="bg-[#072e23] text-slate-300 py-8 text-center text-xs mt-12">
-        <p className="font-bold text-white text-sm mb-1">জীবনযত্ন (JibonJotno)</p>
-        <p className="text-slate-400">&copy; 2026 JibonJotno. All rights reserved.</p>
-      </footer>
     </div>
   );
 }

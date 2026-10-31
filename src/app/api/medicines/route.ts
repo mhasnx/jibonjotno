@@ -1,83 +1,68 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { MASTER_CATALOG } from "@/data/medicinesCatalog";
 import fs from "fs";
 import path from "path";
 
 let cachedCatalog: any[] | null = null;
 
-async function loadDataset() {
-  if (cachedCatalog && cachedCatalog.length > 0) {
-    return cachedCatalog;
-  }
-
-  // 1. Local file JSON check
+function loadFullDatabase() {
+  if (cachedCatalog) return cachedCatalog;
   try {
-    const filePath = path.join(process.cwd(), "public", "data", "all_medicines.json");
+    const filePath = path.join(process.cwd(), "public/data/all_medicines.json");
     if (fs.existsSync(filePath)) {
-      const fileData = fs.readFileSync(filePath, "utf8");
-      if (!fileData.startsWith("version https://git-lfs")) {
-        cachedCatalog = JSON.parse(fileData);
+      const raw = fs.readFileSync(filePath, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        cachedCatalog = [...MASTER_CATALOG, ...parsed];
         return cachedCatalog;
       }
     }
-  } catch (err) {
-    console.error("Local read skipped:", err);
+  } catch (e) {
+    console.error("Failed loading all_medicines.json:", e);
   }
-
-  // 2. Fetch directly from GitHub LFS Media CDN if local file is a Git LFS pointer text
-  try {
-    const cdnUrl = "https://media.githubusercontent.com/media/mhasnx/JibonJotno/main/public/data/all_medicines.json";
-    const res = await fetch(cdnUrl, { next: { revalidate: 86400 } });
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        cachedCatalog = data;
-        return cachedCatalog;
-      }
-    }
-  } catch (err) {
-    console.error("GitHub LFS CDN fetch failed:", err);
-  }
-
-  return null;
+  return MASTER_CATALOG;
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const query = (searchParams.get("q") || "").toLowerCase().trim();
-    const category = searchParams.get("category") || "ALL";
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "24", 10);
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const q = (searchParams.get("q") || "").trim().toLowerCase();
+  const generic = (searchParams.get("generic") || "").trim().toLowerCase();
+  const category = (searchParams.get("category") || "ALL").trim();
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const limit = Math.min(500, Math.max(1, parseInt(searchParams.get("limit") || "60", 10)));
 
-    const catalog = await loadDataset();
+  const allItems = loadFullDatabase();
 
-    if (!catalog || catalog.length === 0) {
-      return NextResponse.json({ items: [], total: 0 });
-    }
+  let filtered = allItems;
 
-    let filtered = catalog;
-
-    if (category !== "ALL") {
-      filtered = filtered.filter(
-        (item: any) => item.category?.toLowerCase() === category.toLowerCase()
-      );
-    }
-
-    if (query) {
-      filtered = filtered.filter(
-        (item: any) =>
-          item.brand?.toLowerCase().includes(query) ||
-          item.generic?.toLowerCase().includes(query) ||
-          item.company?.toLowerCase().includes(query)
-      );
-    }
-
-    const total = filtered.length;
-    const start = (page - 1) * limit;
-    const paginatedItems = filtered.slice(start, start + limit);
-
-    return NextResponse.json({ items: paginatedItems, total });
-  } catch (error) {
-    return NextResponse.json({ error: "API Server Error" }, { status: 500 });
+  if (category && category !== "ALL") {
+    filtered = filtered.filter(
+      (m: any) => (m.category || "").toLowerCase() === category.toLowerCase()
+    );
   }
+
+  if (generic) {
+    filtered = filtered.filter(
+      (m: any) => (m.generic || "").toLowerCase() === generic
+    );
+  } else if (q) {
+    filtered = filtered.filter(
+      (m: any) =>
+        (m.brand || "").toLowerCase().includes(q) ||
+        (m.generic || "").toLowerCase().includes(q) ||
+        (m.company || "").toLowerCase().includes(q)
+    );
+  }
+
+  const total = filtered.length;
+  const start = (page - 1) * limit;
+  const items = filtered.slice(start, start + limit);
+
+  return NextResponse.json({
+    total,
+    totalDatabase: allItems.length,
+    page,
+    limit,
+    items,
+  });
 }

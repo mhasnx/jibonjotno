@@ -10,48 +10,44 @@ import MedicinePackagingModal from "@/components/medicines/MedicinePackagingModa
 import VoiceSearchModal from "@/components/features/VoiceSearchModal";
 import { normalizeVoiceQuery } from "@/lib/medical/voiceSearchHelper";
 import { MedicineCardSkeleton } from "@/components/ui/Skeleton";
-import StructuredData from "@/components/seo/StructuredData";
 
-function MedicineThumb({ item }: { item: CatalogItem }) {
+function MedicinePacketThumbnail({ item }: { item: CatalogItem }) {
   const [imgErr, setImgErr] = useState(false);
-  const badgeColors: Record<string, string> = {
-    Gastric: "from-emerald-700 to-teal-900",
-    Fever: "from-amber-600 to-orange-800",
-    Pain: "from-rose-600 to-red-900",
-    Antibiotic: "from-indigo-600 to-blue-950",
-    Allergy: "from-cyan-600 to-sky-900",
-    Vitamin: "from-teal-600 to-emerald-900",
-    Cardiac: "from-red-600 to-rose-950",
-    Diabetes: "from-purple-600 to-indigo-950",
-    Equipment: "from-slate-700 to-slate-950",
-  };
-  const bg = badgeColors[item.category] || "from-emerald-700 to-teal-900";
 
-  if (item.imageUrl && !imgErr && !item.imageUrl.includes("scribd")) {
+  const validImg =
+    item.imageUrl &&
+    !imgErr &&
+    !item.imageUrl.includes("scribd") &&
+    item.imageUrl.startsWith("http");
+
+  if (validImg) {
     return (
-      <div className="w-20 h-20 rounded-2xl border border-slate-200/80 bg-white p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+      <div className="w-24 h-20 rounded-2xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
         <img
           src={item.imageUrl}
           alt={item.brand}
           onError={() => setImgErr(true)}
-          className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
+          className="max-h-full max-w-full object-contain group-hover:scale-105 transition"
         />
       </div>
     );
   }
 
   return (
-    <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${bg} text-white p-2 flex flex-col justify-between shrink-0 shadow-sm select-none border border-white/15`}>
-      <div className="flex justify-between items-center text-[8px] font-black uppercase opacity-80">
-        <span className="truncate">{item.dosageForm}</span>
-        <span>3D</span>
+    <div className="w-24 h-20 rounded-2xl bg-gradient-to-br from-white via-slate-50 to-emerald-50/80 border-2 border-emerald-600/30 p-2 flex flex-col justify-between shrink-0 shadow-xs relative overflow-hidden select-none">
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#0f4c3a] via-emerald-500 to-amber-500" />
+      <div className="flex justify-between items-center text-[8px] font-black text-slate-500 pt-0.5">
+        <span className="truncate uppercase text-[#0f4c3a]">{item.dosageForm}</span>
+        <span className="bg-emerald-100 text-emerald-900 px-1 rounded">PACK</span>
       </div>
-      <div className="text-center my-auto">
-        <div className="text-[11px] font-black leading-tight truncate">{item.brand}</div>
-        <div className="text-[8px] text-emerald-200 font-bold truncate">{item.strength}</div>
+      <div className="my-auto">
+        <div className="text-[11px] font-black text-slate-900 leading-tight truncate">
+          {item.brand}®
+        </div>
+        <div className="text-[9px] text-amber-700 font-extrabold truncate">{item.strength}</div>
       </div>
-      <div className="text-[7px] text-center bg-black/25 rounded py-0.5 font-mono truncate">
-        {item.company?.split(" ")[0] || "Pharma"}
+      <div className="text-[7px] text-slate-500 font-bold truncate border-t border-slate-200/80 pt-0.5">
+        {item.company.split(" ")[0]}
       </div>
     </div>
   );
@@ -65,9 +61,8 @@ function MedicinesCatalogContent() {
   const { t } = useLanguage();
   const { addToCart } = useCart();
 
-  const [items, setItems] = useState<CatalogItem[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [catalog, setCatalog] = useState<CatalogItem[]>(MASTER_CATALOG);
+  const [isLoadingExtended, setIsLoadingExtended] = useState(true);
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
@@ -78,58 +73,76 @@ function MedicinesCatalogContent() {
   const itemsPerPage = 24;
 
   useEffect(() => {
-    let isMounted = true;
-    setIsLoading(true);
+    const qParam = searchParams.get("q");
+    if (qParam !== null) {
+      setSearchQuery(qParam);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
 
-    const queryStr = new URLSearchParams({
-      q: searchQuery,
-      category: selectedCategory,
-      page: currentPage.toString(),
-      limit: itemsPerPage.toString(),
-    }).toString();
+  useEffect(() => {
+    setIsLoadingExtended(true);
+    const customSaved = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("jj_custom_medicines") || "[]") : [];
+    const overrides = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("jj_medicine_overrides") || "{}") : {};
 
-    fetch(`/api/medicines?${queryStr}`)
-      .then((res) => res.json())
+    // Try loading full /data/all_medicines.json first, fallback to /api/medicines
+    fetch("/data/all_medicines.json")
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (isMounted) {
-          if (data.items && data.items.length > 0) {
-            setItems(data.items);
-            setTotalItems(data.total);
-          } else if (currentPage === 1 && !searchQuery && selectedCategory === "ALL") {
-            setItems(MASTER_CATALOG);
-            setTotalItems(MASTER_CATALOG.length);
-          } else {
-            setItems([]);
-            setTotalItems(0);
-          }
+        if (Array.isArray(data) && data.length > 0) {
+          const combined = [...customSaved, ...MASTER_CATALOG, ...data].map((item) =>
+            overrides[item.id] ? { ...item, ...overrides[item.id] } : item
+          );
+          setCatalog(combined);
+        } else {
+          return fetch("/api/medicines?limit=500")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((apiData) => {
+              if (apiData && Array.isArray(apiData.items) && apiData.items.length > 0) {
+                setCatalog([...customSaved, ...apiData.items]);
+              }
+            });
         }
       })
-      .catch(() => {
-        if (isMounted) {
-          setItems(MASTER_CATALOG);
-          setTotalItems(MASTER_CATALOG.length);
-        }
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => { isMounted = false; };
-  }, [searchQuery, selectedCategory, currentPage]);
+      .catch(() => {})
+      .finally(() => setIsLoadingExtended(false));
+  }, []);
 
   const categories = [
-    { id: "ALL", bn: "\u09b8\u09ac \u0995\u09cd\u09af\u09be\u099f\u09be\u0997\u09b0\u09bf", en: "All Items" },
-    { id: "Gastric", bn: "\u0997\u09cd\u09af\u09be\u09b8\u09cd\u099f\u09cd\u09b0\u09bf\u0995", en: "Gastric" },
-    { id: "Fever", bn: "\u099c\u09cd\u09ac\u09b0 \u0993 \u09ac\u09cd\u09af\u09be\u09a5\u09be", en: "Fever & Pain" },
-    { id: "Antibiotic", bn: "\u0985\u09cd\u09af\u09be\u09a8\u09cd\u099f\u09bf\u09ac\u09be\u09df\u09cb\u099f\u09bf\u0995", en: "Antibiotics" },
-    { id: "Allergy", bn: "\u0985\u09cd\u09af\u09be\u09b2\u09be\u09b0\u09cd\u099c\u09bf", en: "Allergy" },
-    { id: "Vitamin", bn: "\u09ad\u09bf\u099f\u09be\u09ae\u09bf\u09a8", en: "Vitamins" },
-    { id: "Cardiac", bn: "\u09b9\u09c3\u09a6\u09b0\u09cb\u0997 \u0993 \u09aa\u09cd\u09b0\u09c7\u09b6\u09be\u09b0", en: "Cardiac" },
-    { id: "Diabetes", bn: "\u09a1\u09be\u09df\u09be\u09ac\u09c7\u099f\u09bf\u09b8", en: "Diabetes" },
-    { id: "Equipment", bn: "\u09ae\u09c7\u09a1\u09bf\u0995\u09c7\u09b2 \u09a1\u09bf\u09ad\u09be\u0987\u09b8", en: "Devices" },
+    { id: "ALL", bn: "সব ক্যাটাগরি", en: "All Items" },
+    { id: "Gastric", bn: "গ্যাস্ট্রিক", en: "Gastric" },
+    { id: "Fever", bn: "জ্বর ও ব্যথা", en: "Fever & Pain" },
+    { id: "Antibiotic", bn: "অ্যান্টিবায়োটিক", en: "Antibiotics" },
+    { id: "Allergy", bn: "অ্যালার্জি", en: "Allergy" },
+    { id: "Vitamin", bn: "ভিটামিন", en: "Vitamins" },
+    { id: "Cardiac", bn: "হৃদরোগ ও প্রেশার", en: "Cardiac" },
+    { id: "Diabetes", bn: "ডায়াবেটিস", en: "Diabetes" },
+    { id: "Equipment", bn: "মেডিকেল ডিভাইস", en: "Devices" },
   ];
 
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const filteredItems = useMemo(() => {
+    const q = normalizeVoiceQuery(searchQuery).toLowerCase();
+    return catalog.filter((item) => {
+      const matchesCat =
+        selectedCategory === "ALL" ||
+        (item.category || "").toLowerCase() === selectedCategory.toLowerCase();
+      if (!matchesCat) return false;
+      if (!q) return true;
+
+      return (
+        (item.brand || "").toLowerCase().includes(q) ||
+        (item.generic || "").toLowerCase().includes(q) ||
+        (item.company || "").toLowerCase().includes(q) ||
+        (item.category || "").toLowerCase().includes(q)
+      );
+    });
+  }, [catalog, searchQuery, selectedCategory]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / itemsPerPage));
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredItems.slice(start, start + itemsPerPage);
+  }, [filteredItems, currentPage]);
 
   const handleQuickAdd = (med: CatalogItem) => {
     addToCart({
@@ -141,7 +154,7 @@ function MedicinesCatalogContent() {
       requiresRx: med.requiresRx,
       dosageForm: med.dosageForm,
     });
-    setAddedToast(`${med.brand} added to pharmacy bag!`);
+    setAddedToast(`${med.brand} ফার্মেসি ব্যাগে যুক্ত হয়েছে!`);
     setTimeout(() => setAddedToast(""), 2500);
   };
 
@@ -169,12 +182,15 @@ function MedicinesCatalogContent() {
               35,941+ VERIFIED DATABASE
             </span>
             <h1 className="text-2xl md:text-3xl font-black mt-2">
-              {t("\u09aa\u09c2\u09b0\u09cd\u09a3\u09be\u0999\u09cd\u0997 \u0994\u09b7\u09a7 \u09a8\u09bf\u09b0\u09cd\u09a6\u09c7\u09b6\u09bf\u0995\u09be \u0993 \u09ae\u09c2\u09b2\u09cd\u09af \u09a4\u09be\u09b2\u09bf\u0995\u09be", "Bangladesh Medicine Directory")}
+              {t("পূর্ণাঙ্গ ঔষধ নির্দেশিকা ও মূল্য তালিকা", "Bangladesh Medicine & Device Directory")}
             </h1>
           </div>
+
           <div className="text-xs bg-white/10 px-4 py-2 rounded-2xl border border-white/15">
-            {t("\u09aa\u09be\u0993\u09af\u09bc\u09be \u0997\u09c7\u099b\u09c7:", "Found:")}{" "}
-            <strong className="text-amber-300 font-mono text-sm">{totalItems}</strong>
+            {t("পাওয়া গেছে:", "Found:")}{" "}
+            <strong className="text-amber-300 font-mono text-sm">
+              {filteredItems.length.toLocaleString()}
+            </strong>
           </div>
         </div>
 
@@ -188,13 +204,19 @@ function MedicinesCatalogContent() {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder={t("\u09ac\u09cd\u09b0\u09cd\u09af\u09be\u09a8\u09cd\u09a1, \u099c\u09c7\u09a8\u09c7\u09b0\u09bf\u0995 \u09ac\u09be \u0995\u09cb\u09ae\u09cd\u09aa\u09be\u09a8\u09bf\u09b0 \u09a8\u09be\u09ae \u09b2\u09bf\u0996\u09c1\u09a8...", "Type brand, generic...")}
+              placeholder={t(
+                "ব্র্যান্ড, জেনেরিক বা কোম্পানির নাম লিখুন (Napa, Sergel, Cefixime)...",
+                "Type brand, generic, or pharmaceutical company..."
+              )}
               className="w-full px-3 py-2.5 text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => { setSearchQuery(""); router.replace("/medicines"); }}
+                onClick={() => {
+                  setSearchQuery("");
+                  router.replace("/medicines");
+                }}
                 className="text-slate-400 hover:text-rose-600 px-2.5 text-xs font-black"
               >
                 ✕
@@ -203,9 +225,10 @@ function MedicinesCatalogContent() {
             <button
               type="button"
               onClick={() => setVoiceModalOpen(true)}
-              className="w-10 h-10 rounded-xl bg-emerald-50 hover:bg-rose-600 text-[#0f4c3a] hover:text-white flex items-center justify-center shrink-0 cursor-pointer"
+              className="w-10 h-10 rounded-xl bg-emerald-50 hover:bg-rose-600 text-[#0f4c3a] hover:text-white flex items-center justify-center transition shrink-0 cursor-pointer"
+              title="Voice Search"
             >
-              🎙️
+              <span>🎙️</span>
             </button>
           </div>
         </div>
@@ -214,9 +237,14 @@ function MedicinesCatalogContent() {
           {categories.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => { setSelectedCategory(cat.id); setCurrentPage(1); }}
+              onClick={() => {
+                setSelectedCategory(cat.id);
+                setCurrentPage(1);
+              }}
               className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition cursor-pointer ${
-                selectedCategory === cat.id ? "bg-amber-400 text-slate-950 font-black shadow-xs" : "bg-white/10 text-emerald-100 hover:bg-white/20"
+                selectedCategory === cat.id
+                  ? "bg-amber-400 text-slate-950 font-black shadow-xs"
+                  : "bg-white/10 text-emerald-100 hover:bg-white/20"
               }`}
             >
               {t(cat.bn, cat.en)}
@@ -225,62 +253,85 @@ function MedicinesCatalogContent() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoadingExtended && paginatedItems.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <MedicineCardSkeleton key={n} />
           ))}
         </div>
-      ) : items.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
-          <div className="text-4xl">🔍</div>
-          <h3 className="text-base font-black text-slate-800">No medicines found</h3>
-          <button
-            onClick={() => { setSearchQuery(""); setSelectedCategory("ALL"); }}
-            className="bg-[#0f4c3a] text-white px-5 py-2.5 rounded-xl text-xs font-bold"
-          >
-            Show All Medicines
-          </button>
-        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-          {items.map((med) => (
-            <div key={med.id} className="premium-card bg-white rounded-3xl p-5 border border-slate-200/90 flex flex-col justify-between group">
-              <div className="flex items-start space-x-4">
-                <MedicineThumb item={med} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">{med.dosageForm}</span>
-                    {med.requiresRx ? (
-                      <span className="text-[10px] font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">Rx</span>
-                    ) : (
-                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">OTC</span>
-                    )}
-                  </div>
-                  <h3 className="text-base font-black text-slate-900 mt-1.5 truncate group-hover:text-[#0f4c3a] transition">
-                    {med.brand} <span className="text-xs font-bold text-slate-500">{med.strength}</span>
-                  </h3>
-                  <p className="text-xs font-bold text-emerald-800 truncate mt-0.5">🧬 {med.generic}</p>
-                  <p className="text-[11px] text-slate-500 truncate mt-0.5">🏢 {med.company}</p>
-                </div>
-              </div>
+          {paginatedItems.map((med) => {
+            const unitP = parseFloat(med.priceTk) || 5.0;
+            const stripP = (unitP * 10).toFixed(2);
+            return (
+              <div
+                key={med.id}
+                onClick={() => setSelectedItem(med)}
+                className="premium-card bg-white rounded-3xl p-5 border border-slate-200/90 hover:border-[#0f4c3a] flex flex-col justify-between group cursor-pointer transition shadow-2xs hover:shadow-xl"
+              >
+                <div className="flex items-start space-x-4">
+                  <MedicinePacketThumbnail item={med} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                        {med.dosageForm}
+                      </span>
+                      {med.requiresRx ? (
+                        <span className="text-[10px] font-bold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-200">
+                          Rx
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
+                          OTC
+                        </span>
+                      )}
+                    </div>
 
-              <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2">
-                <div>
-                  <span className="text-[10px] text-slate-400 block">Unit Price</span>
-                  <span className="text-base font-black text-[#0f4c3a] font-mono">BDT {med.priceTk}</span>
+                    <h3 className="text-base font-black text-slate-900 mt-1.5 truncate group-hover:text-[#0f4c3a] transition">
+                      {med.brand}{" "}
+                      <span className="text-xs font-bold text-slate-500">{med.strength}</span>
+                    </h3>
+                    <p className="text-xs font-bold text-emerald-800 truncate mt-0.5">
+                      🧬 {med.generic}
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                      🏢 {med.company}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-1.5">
-                  <button onClick={() => setSelectedItem(med)} className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold cursor-pointer">
-                    {t("\u09ac\u09bf\u09b8\u09cd\u09a4\u09be\u09b0\u09bf\u09a4", "Details")}
-                  </button>
-                  <button onClick={() => handleQuickAdd(med)} className="px-3.5 py-2 rounded-xl bg-[#0f4c3a] hover:bg-emerald-900 text-white text-xs font-bold cursor-pointer">
-                    + {t("\u0985\u09b0\u09cd\u09a1\u09be\u09b0", "Add")}
-                  </button>
+
+                <div
+                  className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">
+                      Unit: ৳{unitP.toFixed(2)} • পাতা: ৳{stripP}
+                    </span>
+                    <span className="text-base font-black text-[#0f4c3a] font-mono">
+                      BDT {unitP.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-1.5">
+                    <button
+                      onClick={() => setSelectedItem(med)}
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition cursor-pointer"
+                    >
+                      {t("বিস্তারিত", "Details")}
+                    </button>
+                    <button
+                      onClick={() => handleQuickAdd(med)}
+                      className="px-3.5 py-2 rounded-xl bg-[#0f4c3a] hover:bg-emerald-900 text-white text-xs font-bold transition shadow-2xs cursor-pointer"
+                    >
+                      + {t("অর্ডার", "Add")}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -288,17 +339,23 @@ function MedicinesCatalogContent() {
         <div className="flex justify-center items-center space-x-3 pt-4">
           <button
             disabled={currentPage <= 1}
-            onClick={() => { setCurrentPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            onClick={() => {
+              setCurrentPage((p) => Math.max(1, p - 1));
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
           >
             ← Prev
           </button>
           <span className="text-xs font-bold text-slate-700 bg-white px-4 py-2 rounded-xl border border-slate-200">
-            Page {currentPage} / {totalPages}
+            Page {currentPage} / {totalPages.toLocaleString()}
           </span>
           <button
             disabled={currentPage >= totalPages}
-            onClick={() => { setCurrentPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            onClick={() => {
+              setCurrentPage((p) => Math.min(totalPages, p + 1));
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
           >
             Next →
@@ -307,7 +364,12 @@ function MedicinesCatalogContent() {
       )}
 
       {selectedItem && (
-        <MedicinePackagingModal medicine={selectedItem} onClose={() => setSelectedItem(null)} />
+        <MedicinePackagingModal
+          medicine={selectedItem}
+          allMedicines={catalog}
+          onClose={() => setSelectedItem(null)}
+          onSelectAlternative={(alt) => setSelectedItem(alt)}
+        />
       )}
     </main>
   );
@@ -317,13 +379,9 @@ export default function MedicinesPage() {
   return (
     <div className="min-h-screen bg-[#f4f7f6] flex flex-col justify-between font-sans text-slate-800 pb-20 lg:pb-0">
       <PublicNavbar />
-      <Suspense fallback={<div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">{[1, 2, 3, 4, 5, 6].map((i) => (<MedicineCardSkeleton key={i} />))}</div>}>
+      <Suspense fallback={<div className="p-12 text-center">Loading 35,941+ Medicines...</div>}>
         <MedicinesCatalogContent />
       </Suspense>
-      <footer className="bg-[#072e23] text-slate-300 py-8 text-center text-xs mt-12">
-        <p className="font-bold text-white text-sm mb-1">JibonJotno Digital Health</p>
-        <p className="text-slate-400">&copy; 2026 JibonJotno. All rights reserved.</p>
-      </footer>
     </div>
   );
 }
