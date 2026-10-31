@@ -5,11 +5,10 @@ import Link from "next/link";
 import { MASTER_CATALOG, CatalogItem } from "@/data/medicinesCatalog";
 
 export default function FullAdminDashboard() {
-  const [activeTab, setActiveTab] = useState<"CATALOG" | "ADD_NEW" | "ROLES">("CATALOG");
+  const [activeTab, setActiveTab] = useState<"CATALOG" | "ADD_NEW">("CATALOG");
   const [medicines, setMedicines] = useState<CatalogItem[]>(MASTER_CATALOG as any);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
 
@@ -75,7 +74,6 @@ export default function FullAdminDashboard() {
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return medicines.filter((m: any) => {
-      if (selectedCategory !== "ALL" && (m.category || "").toLowerCase() !== selectedCategory.toLowerCase()) return false;
       if (!q) return true;
       return (
         (m.brand || "").toLowerCase().includes(q) ||
@@ -83,7 +81,7 @@ export default function FullAdminDashboard() {
         (m.company || "").toLowerCase().includes(q)
       );
     });
-  }, [medicines, searchQuery, selectedCategory]);
+  }, [medicines, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const paginated = useMemo(() => {
@@ -118,8 +116,8 @@ export default function FullAdminDashboard() {
       dosageForm: editDosage,
       category: editCategory,
       priceTk: editPrice,
-      imageUrl: editImageUrl || undefined,
-      youtubeUrl: editYoutubeUrl || undefined,
+      imageUrl: editImageUrl || "",
+      youtubeUrl: editYoutubeUrl || "",
       requiresRx: editRx,
     };
 
@@ -143,8 +141,8 @@ export default function FullAdminDashboard() {
       dosageForm: newDosage,
       category: newCategory,
       priceTk: newPrice || "5.00",
-      imageUrl: newImageUrl || undefined,
-      youtubeUrl: newYoutubeUrl || undefined,
+      imageUrl: newImageUrl || "",
+      youtubeUrl: newYoutubeUrl || "",
       requiresRx: newRx,
     };
 
@@ -424,7 +422,7 @@ export default function FullAdminDashboard() {
               </h3>
               <button
                 onClick={() => setEditingMed(null)}
-                className="text-slate-400 hover:text-white font-black text-sm"
+                className="text-slate-400 hover:text-white font-black text-sm cursor-pointer"
               >
                 ✕
               </button>
@@ -505,13 +503,13 @@ export default function FullAdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setEditingMed(null)}
-                  className="bg-slate-800 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold"
+                  className="bg-slate-800 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black"
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black cursor-pointer"
                 >
                   ✓ সংরক্ষণ করুন
                 </button>

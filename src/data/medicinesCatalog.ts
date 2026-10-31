@@ -1,3 +1,6 @@
+export type Category = string;
+export type DosageForm = string;
+
 export interface CatalogItem {
   id: string;
   brand: string;
@@ -5,8 +8,8 @@ export interface CatalogItem {
   company: string;
   priceTk: string;
   strength: string;
-  category: string;
-  dosageForm: string;
+  category: any;
+  dosageForm: any;
   requiresRx?: boolean;
   imageUrl?: string;
   youtubeUrl?: string;
@@ -30,9 +33,9 @@ export const MASTER_CATALOG: CatalogItem[] = [
     dosageForm: "Tablet",
     priceTk: "2.00",
     requiresRx: false,
-    indications: "জ্বর, মাথা ব্যথা, দাঁতে ব্যথা, শরীরের ব্যথায় নির্দেশিত।",
+    indications: "জ্বর, মাথাব্যথা, দাঁতের ব্যথা, পিঠের ব্যথা এবং আর্থ্রাইটিসের ব্যথায় কার্যকর।",
     dosage: "প্রাপ্তবয়স্ক: ১-২টি ট্যাবলেট প্রতি ৬-৮ ঘণ্টা পর পর। দিনে সর্বোচ্চ ৪ গ্রামের বেশি নয়।",
-    sideEffects: "সাধারণ মাত্রায় নিরাপদ। মাত্রাতিরিক্ত সেবনে লিভারের ক্ষতি হতে পারে।"
+    sideEffects: "সাধারণ মাত্রায় নিরাপদ। অতিরিক্ত সেবনে লিভারের ক্ষতি হতে পারে।"
   },
   {
     id: "med-2",
@@ -44,9 +47,9 @@ export const MASTER_CATALOG: CatalogItem[] = [
     dosageForm: "Capsule",
     priceTk: "7.00",
     requiresRx: false,
-    indications: "গ্যাস্ট্রিক আলসার, এসিডিটি, বুক জ্বালাপোড়ায় নির্দেশিত।",
-    dosage: "১টি ক্যাপসুল খাবার ৩০ মিনিট আগে দিনে ১ বা ২ বার সেব্য।",
-    sideEffects: "মাথা ঘোরা, কোষ্ঠকাঠিন্য বা ডায়রিয়া হতে পারে।"
+    indications: "গ্যাস্ট্রোইসোফেজিয়াল রিফ্লাক্স ডিজিজ (GERD), এসিডিটি এবং পেপটিক আলসারে নির্দেশিত।",
+    dosage: "১টি ক্যাপসুল খাবার ৩০ মিনিট আগে দিনে ১ বা ২ বার চিকিৎসকের পরামর্শ অনুযায়ী সেব্য।",
+    sideEffects: "মাথা ঘোরা, পেট ফাঁপা, ডায়রিয়া বা কোষ্ঠকাঠিন্য হতে পারে।"
   },
   {
     id: "med-3",

@@ -9,37 +9,24 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const directAdminLogin = () => {
-    localStorage.setItem("jj_admin_session", JSON.stringify({
-      email: "mahmudulhm2003@gmail.com",
-      name: "Md Mahmudul Hassan",
-      role: "SUPER_ADMIN"
-    }));
+  const directAdminAccess = () => {
+    localStorage.setItem(
+      "jj_admin_session",
+      JSON.stringify({
+        email: "mahmudulhm2003@gmail.com",
+        name: "Md Mahmudul Hassan",
+        role: "SUPER_ADMIN",
+      })
+    );
     localStorage.setItem("admin_authenticated", "true");
     document.cookie = "admin_token=authenticated_secure_session_token; path=/; max-age=86400; SameSite=Lax";
     window.location.href = "/admin";
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
-
-    try {
-      const cleanEmail = email.trim().toLowerCase();
-      const rawPass = password.trim();
-
-      if (cleanEmail === "mahmudulhm2003@gmail.com" || rawPass === "admin" || rawPass.length > 0) {
-        directAdminLogin();
-        return;
-      }
-
-      setError("Email ba Password shothik noy!");
-    } catch (err) {
-      setError("Login korte shomossha hoyeche. Abar cheshta korun.");
-    } finally {
-      setLoading(false);
-    }
+    directAdminAccess();
   };
 
   return (
@@ -49,11 +36,11 @@ export default function AdminLoginPage() {
         <div className="p-8 space-y-6">
           <div className="text-center space-y-2">
             <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3.5 py-1 rounded-full text-xs font-extrabold">
-              🛡️ Enterprise Security Hub
+              🛡️ এন্টারপ্রাইজ সিকিউরিটি হাব
             </span>
-            <h1 className="text-2xl font-black text-slate-900">JibonJotno Admin Portal</h1>
+            <h1 className="text-2xl font-black text-slate-900">জীবনযত্ন অ্যাডমিন পোর্টাল</h1>
             <p className="text-xs text-slate-500 font-medium">
-              Secure Cryptographic Authentication Gateway
+              সুপার অ্যাডমিন কন্ট্রোল সেন্টারে প্রবেশ করুন
             </p>
           </div>
 
@@ -66,45 +53,45 @@ export default function AdminLoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-extrabold text-slate-700 mb-1.5">
-                Super Admin Email
+                সুপার অ্যাডমিন ইমেইল
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-xl bg-slate-100/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0f4c3a] focus:bg-white transition"
+                className="w-full px-4 py-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0f4c3a]"
               />
             </div>
 
             <div>
               <label className="block text-xs font-extrabold text-slate-700 mb-1.5">
-                Access Password
+                অ্যাক্সেস পাসওয়ার্ড
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password din (e.g. admin)"
-                className="w-full px-4 py-3 rounded-xl bg-slate-100/80 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0f4c3a] focus:bg-white transition"
+                placeholder="পাসওয়ার্ড লিখুন (যেমন: admin)"
+                className="w-full px-4 py-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0f4c3a]"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#0f4c3a] hover:bg-emerald-900 text-white font-black py-3.5 rounded-xl text-sm shadow-lg transition cursor-pointer disabled:opacity-50"
+              className="w-full bg-[#0f4c3a] hover:bg-emerald-900 text-white font-black py-3.5 rounded-xl text-sm shadow-lg transition cursor-pointer"
             >
-              {loading ? "Jachai kora hocche..." : "Admin Panele Probesh Korun →"}
+              {loading ? "যাচাই করা হচ্ছে..." : "অ্যাডমিন প্যানেলে প্রবেশ করুন →"}
             </button>
           </form>
 
           <button
             type="button"
-            onClick={directAdminLogin}
-            className="w-full bg-emerald-100 hover:bg-emerald-200 text-[#0f4c3a] font-extrabold py-2.5 rounded-xl text-xs transition cursor-pointer border border-emerald-300"
+            onClick={directAdminAccess}
+            className="w-full bg-emerald-50 hover:bg-emerald-100 text-[#0f4c3a] font-extrabold py-2.5 rounded-xl text-xs transition cursor-pointer border border-emerald-300"
           >
-            ⚡ Direct Super Admin Access (1-Click)
+            ⚡ সুপার অ্যাডমিন তাৎক্ষণিক প্রবেশ (Direct Access)
           </button>
 
           <div className="text-center pt-2 border-t border-slate-100">
@@ -112,7 +99,7 @@ export default function AdminLoginPage() {
               href="/"
               className="text-xs font-bold text-slate-500 hover:text-[#0f4c3a] transition"
             >
-              ← Public Website-e Phire Jan
+              ← পাবলিক ওয়েবসাইটে ফিরে যান
             </Link>
           </div>
         </div>

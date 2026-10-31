@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useCart } from "@/context/CartContext";
 
 interface Props {
-  medicine: CatalogItem & { youtubeUrl?: string };
+  medicine: CatalogItem;
   allMedicines?: CatalogItem[];
   onClose: () => void;
   onSelectAlternative?: (med: CatalogItem) => void;
@@ -20,7 +20,6 @@ export default function MedicinePackagingModal({
 }: Props) {
   const { t } = useLanguage();
   const { addToCart } = useCart();
-  const [imgError, setImgError] = useState(false);
   const [viewMode, setViewMode] = useState<"PACK" | "STRIP">("PACK");
   const [alternatives, setAlternatives] = useState<CatalogItem[]>([]);
   const [addedMsg, setAddedMsg] = useState(false);
@@ -29,26 +28,24 @@ export default function MedicinePackagingModal({
   const stripPrice = (unitPrice * 10).toFixed(2);
   const boxPrice = (unitPrice * 60).toFixed(2);
 
-  // Helper to extract YouTube Embed ID
-  const getEmbedUrl = (url?: string) => {
+  const getYoutubeEmbed = (url?: string) => {
     if (!url) return null;
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/);
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
   };
 
-  const ytEmbed = getEmbedUrl((medicine as any).youtubeUrl);
+  const ytEmbed = getYoutubeEmbed((medicine as any).youtubeUrl);
 
   useEffect(() => {
-    setImgError(false);
-    const localPool = allMedicines.length > 0 ? allMedicines : MASTER_CATALOG;
-    const localMatches = localPool
+    const pool = allMedicines.length > 0 ? allMedicines : MASTER_CATALOG;
+    const sameGeneric = pool
       .filter(
         (m) =>
           m.generic?.toLowerCase() === medicine.generic?.toLowerCase() &&
           m.brand?.toLowerCase() !== medicine.brand?.toLowerCase()
       )
       .slice(0, 6);
-    setAlternatives(localMatches);
+    setAlternatives(sameGeneric);
   }, [medicine, allMedicines]);
 
   const handleOrder = () => {
@@ -74,6 +71,7 @@ export default function MedicinePackagingModal({
         className="bg-white rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl border border-slate-200 my-auto max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Top Header with 3D Packet & Strip */}
         <div className="bg-gradient-to-br from-[#0f4c3a] via-[#0b3b2d] to-[#06231b] text-white p-5 sm:p-7 relative">
           <button
             onClick={onClose}
@@ -83,6 +81,7 @@ export default function MedicinePackagingModal({
           </button>
 
           <div className="flex flex-col md:flex-row gap-6 items-center">
+            {/* 3D Visual Packaging */}
             <div className="w-full md:w-64 shrink-0 flex flex-col items-center">
               {viewMode === "PACK" ? (
                 <div className="w-60 h-44 rounded-2xl bg-gradient-to-br from-white via-slate-50 to-emerald-50 text-slate-900 p-4 shadow-2xl border-2 border-emerald-300 relative overflow-hidden flex flex-col justify-between">
@@ -92,7 +91,7 @@ export default function MedicinePackagingModal({
                       {medicine.dosageForm}
                     </span>
                     <span className="text-[9px] font-extrabold text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-200">
-                      {medicine.requiresRx ? "Rx Only" : "OTC Verified"}
+                      {medicine.requiresRx ? "Rx Only" : "OTC"}
                     </span>
                   </div>
 
@@ -107,14 +106,14 @@ export default function MedicinePackagingModal({
                   </div>
 
                   <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-                    <span className="truncate max-w-[140px]">🏢 {medicine.company}</span>
-                    <span className="font-mono text-[#0f4c3a] font-black">Pack Info</span>
+                    <span className="truncate max-w-[130px]">🏢 {medicine.company}</span>
+                    <span className="font-mono text-[#0f4c3a] font-black">6x10 Pack</span>
                   </div>
                 </div>
               ) : (
                 <div className="w-60 h-44 rounded-2xl bg-gradient-to-br from-slate-200 via-slate-100 to-slate-300 text-slate-800 p-3.5 shadow-2xl border-2 border-slate-400 flex flex-col justify-between">
                   <div className="text-[9px] font-black text-center text-slate-600 uppercase tracking-widest border-b border-slate-300 pb-1">
-                    {medicine.brand} • Blister Strip (10 Units)
+                    {medicine.brand} • Blister Foil Strip
                   </div>
                   <div className="grid grid-cols-5 gap-2 my-auto py-2 px-1">
                     {Array.from({ length: 10 }).map((_, idx) => (
@@ -127,7 +126,7 @@ export default function MedicinePackagingModal({
                     ))}
                   </div>
                   <div className="text-[8px] font-mono text-center text-slate-600">
-                    {medicine.company} • ৳{stripPrice}
+                    {medicine.company} • পাতা: ৳{stripPrice}
                   </div>
                 </div>
               )}
@@ -140,7 +139,7 @@ export default function MedicinePackagingModal({
                     viewMode === "PACK" ? "bg-amber-400 text-slate-950" : "bg-white/15 text-emerald-100"
                   }`}
                 >
-                  📦 Packet View
+                  📦 ৩ডি প্যাকেট ভিউ
                 </button>
                 <button
                   type="button"
@@ -149,23 +148,37 @@ export default function MedicinePackagingModal({
                     viewMode === "STRIP" ? "bg-amber-400 text-slate-950" : "bg-white/15 text-emerald-100"
                   }`}
                 >
-                  💊 Strip View
+                  💊 পাতা ভিউ (Strip)
                 </button>
               </div>
             </div>
 
+            {/* Medicine Main Specs */}
             <div className="flex-1 space-y-2.5 text-center md:text-left">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                <span className="bg-emerald-500/25 border border-emerald-400/40 text-emerald-200 text-[10px] font-black px-3 py-0.5 rounded-full uppercase">
+                  {medicine.dosageForm}
+                </span>
+                <span className="bg-amber-400/20 text-amber-200 text-[10px] font-black px-3 py-0.5 rounded-full">
+                  {medicine.category}
+                </span>
+                <span className="bg-white/10 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                  DGDA Verified
+                </span>
+              </div>
+
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
                 {medicine.brand}{" "}
                 <span className="text-base sm:text-lg font-extrabold text-amber-300">
                   {medicine.strength}
                 </span>
               </h2>
+
               <p className="text-xs sm:text-sm font-bold text-emerald-200">
-                🧬 Generic: <span className="underline">{medicine.generic}</span>
+                🧬 জেনেরিক: <span className="underline">{medicine.generic}</span>
               </p>
               <p className="text-xs text-slate-300 font-semibold">
-                🏢 Company: {medicine.company}
+                🏢 প্রস্তুতকারক: {medicine.company}
               </p>
 
               {(medicine as any).youtubeUrl && (
@@ -176,7 +189,7 @@ export default function MedicinePackagingModal({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-xs font-black px-4 py-2 rounded-xl shadow-md transition"
                   >
-                    <span>▶</span> YouTube Video Guide Dekhun
+                    <span>▶</span> YouTube ভিডিও গাইড দেখুন
                   </a>
                 </div>
               )}
@@ -184,14 +197,15 @@ export default function MedicinePackagingModal({
           </div>
         </div>
 
+        {/* Details & Monograph */}
         <div className="p-5 sm:p-7 overflow-y-auto space-y-5 bg-slate-50/70 flex-1">
-          {/* YouTube Video Player Embed if provided */}
+          {/* YouTube Video Player Embed if available */}
           {ytEmbed && (
             <div className="bg-white rounded-2xl p-4 border border-red-200 shadow-sm space-y-2">
               <h4 className="text-xs font-black text-red-600 uppercase flex items-center gap-1.5">
-                <span>▶</span> Official Medicine Video Guide
+                <span>▶</span> অফিসিয়াল মেডিসিন ভিডিও নির্দেশিকা
               </h4>
-              <div className="relative pb-[56.25%] h-0 rounded-xl overflow-hidden bg-black">
+              <div className="relative pb-[56.25%] h-0 rounded-xl overflow-hidden bg-black shadow-inner">
                 <iframe
                   src={ytEmbed}
                   title={medicine.brand}
@@ -203,18 +217,19 @@ export default function MedicinePackagingModal({
             </div>
           )}
 
+          {/* Pricing Info */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                UNIT PRICE & PACK INFO
+                UNIT PRICE & PACK INFO (মূল্য তালিকা)
               </span>
-              <div className="flex flex-wrap items-baseline gap-3">
+              <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-black text-[#0f4c3a] font-mono">
                   BDT {unitPrice.toFixed(2)}
                 </span>
-                <span className="text-xs text-slate-500 font-semibold">/ unit</span>
+                <span className="text-xs text-slate-500 font-semibold">/ প্রতি ইউনিট</span>
               </div>
-              <div className="flex flex-wrap gap-3 text-xs font-bold text-slate-600 pt-0.5">
+              <div className="flex flex-wrap gap-2.5 text-xs font-bold text-slate-600 pt-0.5">
                 <span className="bg-emerald-50 text-emerald-900 px-2.5 py-1 rounded-lg border border-emerald-200">
                   ১ পাতা (10 Units): ৳ {stripPrice}
                 </span>
@@ -228,25 +243,79 @@ export default function MedicinePackagingModal({
               onClick={handleOrder}
               className="w-full sm:w-auto bg-[#0f4c3a] hover:bg-emerald-950 text-white font-black px-6 py-3.5 rounded-2xl text-xs sm:text-sm shadow-lg transition cursor-pointer"
             >
-              {addedMsg ? "✓ Added to Bag!" : "+ Order (Cash on Delivery)"}
+              {addedMsg ? "✓ ব্যাগে যুক্ত হয়েছে!" : "+ ক্যাশ অন ডেলিভারি অর্ডার"}
             </button>
           </div>
 
-          {/* Clinical Info */}
+          {/* Clinical Monograph */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-1.5">
-              <h4 className="text-xs font-black text-[#0f4c3a] uppercase">🩺 Indications</h4>
+              <h4 className="text-xs font-black text-[#0f4c3a] uppercase">🩺 সেবন নির্দেশিকা (Indications)</h4>
               <p className="text-xs text-slate-700 leading-relaxed">
-                {(medicine as any).indications || `${medicine.brand} (${medicine.generic}) is indicated for ${medicine.category} conditions.`}
+                {(medicine as any).indications ||
+                  `${medicine.brand} (${medicine.generic}) প্রধানত ${medicine.category} সংক্রান্ত উপসর্গ ও রোগের চিকিৎসায় নির্দেশিত। রেজিস্টার্ড চিকিৎসকের পরামর্শ অনুযায়ী সেব্য।`}
               </p>
             </div>
+
             <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-1.5">
-              <h4 className="text-xs font-black text-[#0f4c3a] uppercase">🥄 Dosage & Administration</h4>
+              <h4 className="text-xs font-black text-[#0f4c3a] uppercase">🥄 মাত্রা ও সেবনবিধি (Dosage)</h4>
               <p className="text-xs text-slate-700 leading-relaxed">
-                {(medicine as any).dosage || "Adults: 1 tablet once or twice daily as directed by registered physician."}
+                {(medicine as any).dosage ||
+                  "প্রাপ্তবয়স্ক: প্রতিদিন ১টি করে ট্যাবলেট/ক্যাপসুল দিনে ১ থেকে ২ বার খাবার পূর্বে বা পরে অথবা ডাক্তারের পরামর্শ অনুযায়ী সেব্য।"}
+              </p>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-1.5">
+              <h4 className="text-xs font-black text-rose-700 uppercase">⚠️ পার্শ্বপ্রতিক্রিয়া (Side Effects)</h4>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                {(medicine as any).sideEffects ||
+                  "সাধারণত সুসহনীয়। তবে কিছু ক্ষেত্রে হালকা বমি ভাব, মাথা ঘোরা, পেটে গ্যাস বা অস্বস্তি দেখা দিতে পারে।"}
+              </p>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-1.5">
+              <h4 className="text-xs font-black text-amber-800 uppercase">🛡️ সতর্কতা ও সংরক্ষণ (Storage)</h4>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                আলো ও আর্দ্রতা থেকে দূরে, ৩০° সে. তাপমাত্রার নিচে সংরক্ষণ করুন। শিশুদের নাগালের বাইরে রাখুন।
               </p>
             </div>
           </div>
+
+          {/* Alternative Brands */}
+          {alternatives.length > 0 && (
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 space-y-3">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                  🔄 একই জেনেরিকের বিকল্প ব্র্যান্ড ({medicine.generic})
+                </h4>
+                <a
+                  href={`/compare?generic=${encodeURIComponent(medicine.generic)}`}
+                  className="text-xs font-black text-[#0f4c3a] hover:underline"
+                >
+                  সবগুলোর দাম তুলনা করুন →
+                </a>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {alternatives.map((alt) => (
+                  <div
+                    key={alt.id}
+                    onClick={() => onSelectAlternative && onSelectAlternative(alt)}
+                    className="p-3 rounded-xl border border-slate-200 hover:border-[#0f4c3a] bg-slate-50 hover:bg-emerald-50/40 transition flex justify-between items-center cursor-pointer"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="text-xs font-black text-slate-900 truncate">
+                        {alt.brand} <span className="text-[10px] text-slate-500">{alt.strength}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate">{alt.company}</div>
+                    </div>
+                    <span className="text-xs font-black font-mono text-[#0f4c3a] shrink-0">
+                      ৳{alt.priceTk}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
