@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
-import crypto from "crypto";
 
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
-    const adminEmail = process.env.ADMIN_EMAIL || "mahmudulhm2003@gmail.com";
-    const adminPassHash = process.env.ADMIN_PASSWORD_HASH || "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+    const targetEmail = process.env.ADMIN_EMAIL || "mahmudulhm2003@gmail.com";
+    // Direct plain password fallback check to guarantee instant working login
+    const targetPassword = process.env.ADMIN_PASSWORD || "admin";
 
-    const incomingHash = crypto.createHash("sha256").update(password || "").digest("hex");
-
-    if (email === adminEmail && incomingHash === adminPassHash) {
+    if (email === targetEmail && password === targetPassword) {
       const response = NextResponse.json({ success: true, message: "Login successful" });
       response.cookies.set({
         name: "admin_token",
@@ -18,7 +16,7 @@ export async function POST(request: Request) {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 60 * 60 * 24,
+        maxAge: 60 * 60 * 24, // 24 hours
       });
       return response;
     }
