@@ -90,27 +90,35 @@ function MedicinesCatalogContent() {
 
   useEffect(() => {
     setIsLoadingExtended(true);
-    fetch("/data/all_medicines.json")
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    fetch("/data/all_medicines.json", { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setCatalog([...MASTER_CATALOG, ...data]);
         }
       })
-      .catch(() => {})
-      .finally(() => setIsLoadingExtended(false));
+      .catch(() => {
+        // Fallback to MASTER_CATALOG if needed
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setIsLoadingExtended(false);
+      });
   }, []);
 
   const categories = [
-    { id: "ALL", bn: "\u09B8\u09AC \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF", en: "All Items" },
-    { id: "Gastric", bn: "\u0997\u09CD\u09AF\u09BE\u09B8\u09CD\u099F\u09CD\u09B0\u09BF\u0995", en: "Gastric" },
-    { id: "Fever", bn: "\u099C\u09CD\u09AC\u09B0 \u0993 \u09AC\u09CD\u09AF\u09A5\u09BE", en: "Fever & Pain" },
-    { id: "Antibiotic", bn: "\u0985\u09CD\u09AF\u09BE\u09A8\u09CD\u099F\u09BF\u09AC\u09BE\u09DF\u09CB\u099F\u09BF\u0995", en: "Antibiotics" },
-    { id: "Allergy", bn: "\u0985\u09CD\u09AF\u09BE\u09B2\u09BE\u09B0\u09CD\u099C\u09BF", en: "Allergy" },
-    { id: "Vitamin", bn: "\u09AD\u09BF\u099F\u09BE\u09AE\u09BF\u09A8", en: "Vitamins" },
-    { id: "Cardiac", bn: "\u09B9\u09C3\u09A6\u09B0\u09CB\u0997 \u0993 \u09AA\u09CD\u09B0\u09C7\u09B6\u09BE\u09B0", en: "Cardiac" },
-    { id: "Diabetes", bn: "\u09A1\u09BE\u09DF\u09BE\u09AC\u09C7\u099F\u09BF\u09B8", en: "Diabetes" },
-    { id: "Equipment", bn: "\u09AE\u09C7\u09A1\u09BF\u0995\u09C7\u09B2 \u09A1\u09BF\u09AD\u09BE\u0987\u09B8", en: "Devices" },
+    { id: "ALL", bn: "\u09b8\u09ac \u0995\u09cd\u09af\u09be\u099f\u09be\u0997\u09b0\u09bf", en: "All Items" },
+    { id: "Gastric", bn: "\u0997\u09cd\u09af\u09be\u09b8\u09cd\u099f\u09cd\u09b0\u09bf\u0995", en: "Gastric" },
+    { id: "Fever", bn: "\u099c\u09cd\u09ac\u09b0 \u0993 \u09ac\u09cd\u09af\u09be\u09a5\u09be", en: "Fever & Pain" },
+    { id: "Antibiotic", bn: "\u0985\u09cd\u09af\u09be\u09a8\u09cd\u099f\u09bf\u09ac\u09be\u09df\u09cb\u099f\u09bf\u0995", en: "Antibiotics" },
+    { id: "Allergy", bn: "\u0985\u09cd\u09af\u09be\u09b2\u09be\u09b0\u09cd\u099c\u09bf", en: "Allergy" },
+    { id: "Vitamin", bn: "\u09ad\u09bf\u099f\u09be\u09ae\u09bf\u09a8", en: "Vitamins" },
+    { id: "Cardiac", bn: "\u09b9\u09c3\u09a6\u09b0\u09cb\u0997 \u0993 \u09aa\u09cd\u09b0\u09c7\u09b6\u09be\u09b0", en: "Cardiac" },
+    { id: "Diabetes", bn: "\u09a1\u09be\u09df\u09be\u09ac\u09c7\u099f\u09bf\u09b8", en: "Diabetes" },
+    { id: "Equipment", bn: "\u09ae\u09c7\u09a1\u09bf\u0995\u09c7\u09b2 \u09a1\u09bf\u09ad\u09be\u0987\u09b8", en: "Devices" },
   ];
 
   const filteredItems = useMemo(() => {
@@ -189,12 +197,12 @@ function MedicinesCatalogContent() {
               35,941+ VERIFIED DATABASE
             </span>
             <h1 className="text-2xl md:text-3xl font-black mt-2">
-              {t("\u09AA\u09C2\u09B0\u09CD\u09A3\u09BE\u0999\u09CD\u0997 \u0994\u09B7\u09A7 \u09A8\u09BF\u09B0\u09CD\u09A6\u09C7\u09B6\u09BF\u0995\u09BE \u0993 \u09AE\u09C2\u09B2\u09CD\u09AF \u09A4\u09BE\u09B2\u09BF\u0995\u09BE", "Bangladesh Medicine & Device Directory")}
+              {t("\u09aa\u09c2\u09b0\u09cd\u09a3\u09be\u0999\u09cd\u0997 \u0994\u09b7\u09a7 \u09a8\u09bf\u09b0\u09cd\u09a6\u09c7\u09b6\u09bf\u0995\u09be \u0993 \u09ae\u09c2\u09b2\u09cd\u09af \u09a4\u09be\u09b2\u09bf\u0995\u09be", "Bangladesh Medicine & Device Directory")}
             </h1>
           </div>
 
           <div className="text-xs bg-white/10 px-4 py-2 rounded-2xl border border-white/15">
-            {t("\u09AA\u09BE\u0993\u09DF\u09BE \u0997\u09C7\u099B\u09C7:", "Found:")}{" "}
+            {t("\u09aa\u09be\u0993\u09af\u09bc\u09be \u0997\u09c7\u099b\u09c7:", "Found:")}{" "}
             <strong className="text-amber-300 font-mono text-sm">{filteredItems.length}</strong>
           </div>
         </div>
@@ -210,7 +218,7 @@ function MedicinesCatalogContent() {
                 setCurrentPage(1);
               }}
               placeholder={t(
-                "\u09AC\u09CD\u09B0\u09CD\u09AF\u09BE\u09A8\u09CD\u09A1, \u099C\u09C7\u09A8\u09C7\u09B0\u09BF\u0995 \u09AC\u09BE \u0995\u09CB\u09AE\u09CD\u09AA\u09BE\u09A8\u09BF\u09B0 \u09A8\u09BE\u09AE \u09B2\u09BF\u0996\u09C1\u09A8 (Napa, Sergel, Cefixime)...",
+                "\u09ac\u09cd\u09b0\u09cd\u09af\u09be\u09a8\u09cd\u09a1, \u099c\u09c7\u09a8\u09c7\u09b0\u09bf\u0995 \u09ac\u09be \u0995\u09cb\u09ae\u09cd\u09aa\u09be\u09a8\u09bf\u09b0 \u09a8\u09be\u09ae \u09b2\u09bf\u0996\u09c1\u09a8 (Napa, Sergel, Cefixime)...",
                 "Type brand, generic, or pharmaceutical company..."
               )}
               className="w-full px-3 py-2.5 text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none"
@@ -268,7 +276,7 @@ function MedicinesCatalogContent() {
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
           <div className="text-4xl">🔍</div>
           <h3 className="text-base font-black text-slate-800">
-            {t(`"${searchQuery}" \u09AA\u09BE\u0993\u09DF\u09BE \u09AF\u09BE\u09DF\u09A8\u09BF`, `No medicines found for "${searchQuery}"`)}
+            {t(`"${searchQuery}" \u09aa\u09be\u0993\u09af\u09bc\u09be \u09af\u09be\u09df\u09a8\u09bf`, `No medicines found for "${searchQuery}"`)}
           </h3>
           <button
             onClick={() => {
@@ -277,7 +285,7 @@ function MedicinesCatalogContent() {
             }}
             className="bg-[#0f4c3a] text-white px-5 py-2.5 rounded-xl text-xs font-bold"
           >
-            {t("\u09B8\u09AC \u0994\u09B7\u09A7 \u09A6\u09C7\u0996\u09C1\u09A8", "Show All Medicines")}
+            {t("\u09b8\u09ac \u0994\u09b7\u09a7 \u09a6\u09c7\u0996\u09c1\u09a8", "Show All Medicines")}
           </button>
         </div>
       ) : (
@@ -331,13 +339,13 @@ function MedicinesCatalogContent() {
                     onClick={() => setSelectedItem(med)}
                     className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition cursor-pointer"
                   >
-                    {t("\u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4", "Details")}
+                    {t("\u09ac\u09bf\u09b8\u09cd\u09a4\u09be\u09b0\u09bf\u09a4", "Details")}
                   </button>
                   <button
                     onClick={() => handleQuickAdd(med)}
                     className="px-3.5 py-2 rounded-xl bg-[#0f4c3a] hover:bg-emerald-900 text-white text-xs font-bold transition shadow-2xs cursor-pointer"
                   >
-                    + {t("\u0985\u09B0\u09CD\u09A1\u09BE\u09B0", "Add")}
+                    + {t("\u0985\u09b0\u09cd\u09a1\u09be\u09b0", "Add")}
                   </button>
                 </div>
               </div>
