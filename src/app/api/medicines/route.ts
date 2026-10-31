@@ -1,68 +1,65 @@
-import { NextResponse } from "next/server";
-import { MASTER_CATALOG } from "@/data/medicinesCatalog";
-import fs from "fs";
-import path from "path";
+import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, tooManyRequests } from "@/lib/rateLimit";
+import {
+  clampMedicineLimit,
+  clampMedicinePage,
+  filterMedicines,
+  loadFullDatabase,
+  topGenericGroups,
+} from "@/lib/data/loadMedicines";
 
-let cachedCatalog: any[] | null = null;
+export const runtime = "nodejs";
 
-function loadFullDatabase() {
-  if (cachedCatalog) return cachedCatalog;
+export async function GET(request: NextRequest) {
+  const limited = rateLimit(request, { key: "medicines", limit: 60, windowMs: 60_000 });
+  if (!limited.success) {
+    return tooManyRequests(limited.retryAfterSeconds);
+  }
+
   try {
-    const filePath = path.join(process.cwd(), "public/data/all_medicines.json");
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, "utf-8");
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        cachedCatalog = [...MASTER_CATALOG, ...parsed];
-        return cachedCatalog;
-      }
+    const { searchParams } = new URL(request.url);
+    const q = (searchParams.get("q") || "").trim();
+    const generic = (searchParams.get("generic") || "").trim();
+    const category = (searchParams.get("category") || "ALL").trim();
+    const page = clampMedicinePage(searchParams.get("page"));
+    const limit = clampMedicineLimit(searchParams.get("limit"), 24);
+    const wantGroups = searchParams.get("groups") === "1";
+
+    const allItems = await loadFullDatabase();
+
+    if (wantGroups) {
+      return NextResponse.json(
+        {
+          total: allItems.length,
+          totalDatabase: allItems.length,
+          page: 1,
+          limit,
+          items: [],
+          groups: topGenericGroups(allItems, 40),
+        },
+        { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+      );
     }
-  } catch (e) {
-    console.error("Failed loading all_medicines.json:", e);
-  }
-  return MASTER_CATALOG;
-}
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const q = (searchParams.get("q") || "").trim().toLowerCase();
-  const generic = (searchParams.get("generic") || "").trim().toLowerCase();
-  const category = (searchParams.get("category") || "ALL").trim();
-  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-  const limit = Math.min(500, Math.max(1, parseInt(searchParams.get("limit") || "60", 10)));
+    const filtered = filterMedicines(allItems, { q, generic, category });
+    const total = filtered.length;
+    const start = (page - 1) * limit;
+    const items = filtered.slice(start, start + limit);
 
-  const allItems = loadFullDatabase();
-
-  let filtered = allItems;
-
-  if (category && category !== "ALL") {
-    filtered = filtered.filter(
-      (m: any) => (m.category || "").toLowerCase() === category.toLowerCase()
+    return NextResponse.json(
+      {
+        total,
+        totalDatabase: allItems.length,
+        page,
+        limit,
+        items,
+      },
+      { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } }
+    );
+  } catch {
+    return NextResponse.json(
+      { total: 0, totalDatabase: 0, page: 1, limit: 24, items: [], error: "Unable to load medicines" },
+      { status: 500 }
     );
   }
-
-  if (generic) {
-    filtered = filtered.filter(
-      (m: any) => (m.generic || "").toLowerCase() === generic
-    );
-  } else if (q) {
-    filtered = filtered.filter(
-      (m: any) =>
-        (m.brand || "").toLowerCase().includes(q) ||
-        (m.generic || "").toLowerCase().includes(q) ||
-        (m.company || "").toLowerCase().includes(q)
-    );
-  }
-
-  const total = filtered.length;
-  const start = (page - 1) * limit;
-  const items = filtered.slice(start, start + limit);
-
-  return NextResponse.json({
-    total,
-    totalDatabase: allItems.length,
-    page,
-    limit,
-    items,
-  });
 }

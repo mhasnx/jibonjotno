@@ -7,6 +7,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useCart } from "@/context/CartContext";
 import { MASTER_CATALOG, CatalogItem } from "@/data/medicinesCatalog";
 import MedicinePackagingModal from "@/components/medicines/MedicinePackagingModal";
+import { fetchMedicinesPage } from "@/lib/data/clientMedicines";
 
 function PriceComparisonContent() {
   const searchParams = useSearchParams();
@@ -15,8 +16,11 @@ function PriceComparisonContent() {
   const { addToCart } = useCart();
 
   const [catalog, setCatalog] = useState<CatalogItem[]>(MASTER_CATALOG);
+  const [totalDatabase, setTotalDatabase] = useState(MASTER_CATALOG.length);
+  const [genericGroups, setGenericGroups] = useState<Array<[string, number]>>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(initialGeneric);
+  const [debouncedTerm, setDebouncedTerm] = useState(initialGeneric);
   const [selectedGeneric, setSelectedGeneric] = useState(
     initialGeneric || "Esomeprazole Magnesium Trihydrate"
   );
@@ -24,52 +28,54 @@ function PriceComparisonContent() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    fetch("/data/all_medicines.json")
-      .then((r) => (r.ok ? r.json() : null))
+    const timer = setTimeout(() => setDebouncedTerm(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchMedicinesPage({ groups: true, limit: 24 }, controller.signal)
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setCatalog([...MASTER_CATALOG, ...data]);
+        setTotalDatabase(data.totalDatabase || data.total || MASTER_CATALOG.length);
+        if (Array.isArray(data.groups)) {
+          setGenericGroups(data.groups.map((g) => [g.generic, g.count]));
         }
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => {});
+    return () => controller.abort();
   }, []);
 
-  const genericGroups = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const item of catalog) {
-      if (!item.generic) continue;
-      map.set(item.generic, (map.get(item.generic) || 0) + 1);
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 40);
-  }, [catalog]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    const q = debouncedTerm.trim();
+    fetchMedicinesPage(
+      {
+        q: q || undefined,
+        generic: !q ? selectedGeneric : undefined,
+        limit: 50,
+        page: 1,
+      },
+      controller.signal
+    )
+      .then((data) => {
+        const list = Array.isArray(data.items) ? data.items : MASTER_CATALOG;
+        setCatalog(list);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCatalog(MASTER_CATALOG);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [debouncedTerm, selectedGeneric]);
 
   const comparedMedicines = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    let list = catalog;
-
-    if (q) {
-      const exactBrand = catalog.find((m) => (m.brand || "").toLowerCase() === q);
-      const targetGen = exactBrand ? exactBrand.generic.toLowerCase() : q;
-
-      list = catalog.filter(
-        (m) =>
-          (m.generic || "").toLowerCase().includes(targetGen) ||
-          (m.brand || "").toLowerCase().includes(q)
-      );
-    } else if (selectedGeneric) {
-      list = catalog.filter(
-        (m) => (m.generic || "").toLowerCase() === selectedGeneric.toLowerCase()
-      );
-    }
-
-    return [...list]
+    return [...catalog]
       .sort((a, b) => (parseFloat(a.priceTk) || 0) - (parseFloat(b.priceTk) || 0))
-      .slice(0, 150);
-  }, [catalog, searchTerm, selectedGeneric]);
+      .slice(0, 50);
+  }, [catalog]);
 
   const highestPrice = useMemo(() => {
     if (comparedMedicines.length === 0) return 0;
@@ -104,7 +110,7 @@ function PriceComparisonContent() {
             </p>
           </div>
           <div className="bg-white/10 border border-white/15 px-4 py-2.5 rounded-2xl text-xs">
-            মোট সংযুক্ত ঔষধ: <strong className="text-amber-300 font-mono">{catalog.length.toLocaleString()}</strong>
+            মোট সংযুক্ত ঔষধ: <strong className="text-amber-300 font-mono">{totalDatabase.toLocaleString()}</strong>
           </div>
         </div>
 

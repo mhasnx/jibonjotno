@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { MASTER_CATALOG, CatalogItem } from "@/data/medicinesCatalog";
+import { applyLocalMedicineOverlays, fetchMedicinesPage } from "@/lib/data/clientMedicines";
 
 function AdminMedicineThumb({ item }: { item: CatalogItem }) {
   const [imgErr, setImgErr] = useState(false);
@@ -33,7 +34,6 @@ function AdminMedicineThumb({ item }: { item: CatalogItem }) {
     );
   }
 
-  // Clean 3D Pharmaceutical Visual Box Fallback (No Broken Image Icons!)
   return (
     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} text-white flex flex-col justify-between p-1 shrink-0 shadow-2xs select-none border border-black/10`}>
       <span className="text-[7px] font-black uppercase tracking-tighter truncate opacity-85">
@@ -51,44 +51,58 @@ function AdminMedicineThumb({ item }: { item: CatalogItem }) {
   );
 }
 
+function LiveImagePreview({ url }: { url?: string }) {
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    setErr(false);
+  }, [url]);
+  if (!url || err) return null;
+  return (
+    <div className="mt-2 h-20 w-20 rounded-xl border border-slate-200 bg-white p-1">
+      <img src={url} alt="Packaging preview" className="h-full w-full object-contain" onError={() => setErr(true)} />
+    </div>
+  );
+}
+
 export default function AdminMedicinesPage() {
   const [mounted, setMounted] = useState(false);
   const [medicines, setMedicines] = useState<CatalogItem[]>(MASTER_CATALOG);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalMatches, setTotalMatches] = useState(MASTER_CATALOG.length);
   const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newImagePreview, setNewImagePreview] = useState("");
 
-  const itemsPerPage = 20;
+  const itemsPerPage = 24;
 
   useEffect(() => {
     setMounted(true);
-    fetch("/data/all_medicines.json")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setMedicines([...MASTER_CATALOG, ...data]);
-        }
-      })
-      .catch(() => {});
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return medicines;
-    return medicines.filter(
-      (m) =>
-        m.brand.toLowerCase().includes(q) ||
-        m.generic.toLowerCase().includes(q) ||
-        m.company.toLowerCase().includes(q)
-    );
-  }, [medicines, search]);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-  const currentItems = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage]);
+  useEffect(() => {
+    if (!mounted) return;
+    const controller = new AbortController();
+    fetchMedicinesPage(
+      { q: debouncedSearch, page: currentPage, limit: itemsPerPage },
+      controller.signal
+    )
+      .then((data) => {
+        setMedicines(applyLocalMedicineOverlays(data.items, currentPage === 1 && !debouncedSearch));
+        setTotalMatches(data.total);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [mounted, debouncedSearch, currentPage]);
+
+  const totalPages = Math.max(1, Math.ceil(totalMatches / itemsPerPage));
+  const currentItems = medicines;
 
   const handleDelete = (id: string) => {
     if (confirm("Apni ki shotti ei oushodh-ti talika theke muche felte chan?")) {
@@ -102,12 +116,22 @@ export default function AdminMedicinesPage() {
     setMedicines((prev) =>
       prev.map((m) => (m.id === editingItem.id ? editingItem : m))
     );
+    try {
+      const overrides = JSON.parse(localStorage.getItem("jj_medicine_overrides") || "{}");
+      overrides[editingItem.id] = editingItem;
+      localStorage.setItem("jj_medicine_overrides", JSON.stringify(overrides));
+    } catch {}
     setEditingItem(null);
   };
 
   const handleSaveNew = (newItem: CatalogItem) => {
     setMedicines((prev) => [newItem, ...prev]);
+    try {
+      const existing = JSON.parse(localStorage.getItem("jj_custom_medicines") || "[]");
+      localStorage.setItem("jj_custom_medicines", JSON.stringify([newItem, ...existing]));
+    } catch {}
     setIsAddOpen(false);
+    setNewImagePreview("");
   };
 
   if (!mounted) {
@@ -141,7 +165,7 @@ export default function AdminMedicinesPage() {
       {/* Search & Counter Card */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="text-xs font-bold text-slate-700">
-          মোট নিবন্ধিত ঔষধ: <strong className="text-[#0f4c3a]">{filtered.length}</strong> টি • পৃষ্ঠা {currentPage} / {totalPages}
+          মোট নিবন্ধিত ঔষধ: <strong className="text-[#0f4c3a]">{totalMatches.toLocaleString()}</strong> টি • পৃষ্ঠা {currentPage} / {totalPages}
         </div>
         <div className="relative w-full sm:w-80">
           <input
@@ -349,6 +373,27 @@ export default function AdminMedicinesPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-slate-700 mb-1">Strip Price (৳)</label>
+                  <input
+                    type="text"
+                    value={editingItem.stripPriceTk || ""}
+                    onChange={(e) => setEditingItem({ ...editingItem, stripPriceTk: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 mb-1">Box Price (৳)</label>
+                  <input
+                    type="text"
+                    value={editingItem.boxPriceTk || ""}
+                    onChange={(e) => setEditingItem({ ...editingItem, boxPriceTk: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 font-mono"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-slate-700 mb-1">Packaging Image URL (Online Photo Link)</label>
                 <input
@@ -358,6 +403,7 @@ export default function AdminMedicinesPage() {
                   placeholder="https://..."
                   className="w-full p-2.5 rounded-xl border border-slate-200 font-mono text-[11px]"
                 />
+                <LiveImagePreview url={editingItem.imageUrl} />
               </div>
 
               <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
@@ -486,7 +532,14 @@ export default function AdminMedicinesPage() {
 
               <div>
                 <label className="block text-slate-700 mb-1">Image URL (Optional)</label>
-                <input name="imageUrl" type="url" placeholder="https://..." className="w-full p-2.5 rounded-xl border border-slate-200 font-mono text-[11px]" />
+                <input
+                  name="imageUrl"
+                  type="url"
+                  placeholder="https://..."
+                  className="w-full p-2.5 rounded-xl border border-slate-200 font-mono text-[11px]"
+                  onChange={(e) => setNewImagePreview(e.target.value)}
+                />
+                <LiveImagePreview url={newImagePreview} />
               </div>
 
               <div className="flex items-center space-x-2 pt-1">

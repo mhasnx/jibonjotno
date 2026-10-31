@@ -9,6 +9,7 @@ import QuickRxOrderModal from "@/components/features/QuickRxOrderModal";
 import VoiceSearchModal from "@/components/features/VoiceSearchModal";
 import { MASTER_CATALOG, CatalogItem } from "@/data/medicinesCatalog";
 import { normalizeVoiceQuery } from "@/lib/medical/voiceSearchHelper";
+import { fetchMedicinesPage } from "@/lib/data/clientMedicines";
 
 const QUICK_TAGS = [
   { labelBn: "Napa Extend", labelEn: "Napa Extend", query: "Napa" },
@@ -31,15 +32,28 @@ export default function HomePage() {
   const { t } = useLanguage();
 
   useEffect(() => {
-    fetch("/data/all_medicines.json")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setAllMedicines([...MASTER_CATALOG, ...data]);
-        }
-      })
-      .catch(() => {});
-  }, []);
+    const normalized = normalizeVoiceQuery(query).trim();
+    if (!normalized) {
+      setAllMedicines(MASTER_CATALOG);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetchMedicinesPage({ q: normalized, limit: 8 }, controller.signal)
+        .then((data) => {
+          if (Array.isArray(data.items) && data.items.length > 0) {
+            setAllMedicines(data.items);
+          }
+        })
+        .catch(() => {});
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
 
   const liveMatches = useMemo(() => {
     const normalized = normalizeVoiceQuery(query).toLowerCase();

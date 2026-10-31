@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { saltedPasswordDigest } from "@/lib/auth/sha256";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("mahmudulhm2003@gmail.com");
@@ -9,24 +10,40 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const directAdminAccess = () => {
-    localStorage.setItem(
-      "jj_admin_session",
-      JSON.stringify({
-        email: "mahmudulhm2003@gmail.com",
-        name: "Md Mahmudul Hassan",
-        role: "SUPER_ADMIN",
-      })
-    );
-    localStorage.setItem("admin_authenticated", "true");
-    document.cookie = "admin_token=authenticated_secure_session_token; path=/; max-age=86400; SameSite=Lax";
-    window.location.href = "/admin";
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    directAdminAccess();
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const passwordHash = await saltedPasswordDigest(cleanEmail, password);
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: cleanEmail, passwordHash }),
+      });
+      const data = await response.json().catch(() => ({ success: false }));
+      if (!response.ok || !data.success) {
+        setError(data.message || "Invalid credentials");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem(
+        "jj_admin_session",
+        JSON.stringify({
+          email: data.user?.email || cleanEmail,
+          name: "Md Mahmudul Hassan",
+          role: "SUPER_ADMIN",
+        })
+      );
+      localStorage.setItem("admin_authenticated", "true");
+      window.location.href = "/admin";
+    } catch {
+      setError("Login failed. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,7 +89,9 @@ export default function AdminLoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="পাসওয়ার্ড লিখুন (যেমন: admin)"
+                placeholder="পাসওয়ার্ড লিখুন"
+                required
+                minLength={6}
                 className="w-full px-4 py-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0f4c3a]"
               />
             </div>
@@ -85,14 +104,6 @@ export default function AdminLoginPage() {
               {loading ? "যাচাই করা হচ্ছে..." : "অ্যাডমিন প্যানেলে প্রবেশ করুন →"}
             </button>
           </form>
-
-          <button
-            type="button"
-            onClick={directAdminAccess}
-            className="w-full bg-emerald-50 hover:bg-emerald-100 text-[#0f4c3a] font-extrabold py-2.5 rounded-xl text-xs transition cursor-pointer border border-emerald-300"
-          >
-            ⚡ সুপার অ্যাডমিন তাৎক্ষণিক প্রবেশ (Direct Access)
-          </button>
 
           <div className="text-center pt-2 border-t border-slate-100">
             <Link

@@ -1,5 +1,5 @@
-export type Category = string;
-export type DosageForm = string;
+export type Category = string | any;
+export type DosageForm = string | any;
 
 export interface CatalogItem {
   id: string;
@@ -11,7 +11,7 @@ export interface CatalogItem {
   category: any;
   dosageForm: any;
   requiresRx?: boolean;
-  imageUrl?: string;
+  imageUrl?: string | any;
   youtubeUrl?: string;
   stripPriceTk?: string;
   boxPriceTk?: string;
@@ -33,6 +33,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     dosageForm: "Tablet",
     priceTk: "2.00",
     requiresRx: false,
+    imageUrl: "https://medex.com.bd/cdn/img/medicines/napa-extend-665-mg.png",
     indications: "জ্বর, মাথাব্যথা, দাঁতের ব্যথা, পিঠের ব্যথা এবং আর্থ্রাইটিসের ব্যথায় কার্যকর।",
     dosage: "প্রাপ্তবয়স্ক: ১-২টি ট্যাবলেট প্রতি ৬-৮ ঘণ্টা পর পর। দিনে সর্বোচ্চ ৪ গ্রামের বেশি নয়।",
     sideEffects: "সাধারণ মাত্রায় নিরাপদ। অতিরিক্ত সেবনে লিভারের ক্ষতি হতে পারে।"
@@ -47,45 +48,22 @@ export const MASTER_CATALOG: CatalogItem[] = [
     dosageForm: "Capsule",
     priceTk: "7.00",
     requiresRx: false,
+    imageUrl: "https://medex.com.bd/cdn/img/medicines/sergel-20-mg.png",
     indications: "গ্যাস্ট্রোইসোফেজিয়াল রিফ্লাক্স ডিজিজ (GERD), এসিডিটি এবং পেপটিক আলসারে নির্দেশিত।",
-    dosage: "১টি ক্যাপসুল খাবার ৩০ মিনিট আগে দিনে ১ বা ২ বার চিকিৎসকের পরামর্শ অনুযায়ী সেব্য।",
-    sideEffects: "মাথা ঘোরা, পেট ফাঁপা, ডায়রিয়া বা কোষ্ঠকাঠিন্য হতে পারে।"
+    dosage: "১টি ক্যাপসুল খাবার ৩০ মিনিট আগে দিনে ১ বা ২ বার চিকিৎসকের পরামর্শ অনুযায়ী সেব্য।"
   },
   {
     id: "med-3",
-    brand: "Seclo 20",
-    generic: "Omeprazole",
-    company: "Square Pharmaceuticals Ltd.",
-    strength: "20 mg",
-    category: "Gastric",
-    dosageForm: "Capsule",
-    priceTk: "6.00",
-    requiresRx: false,
-    indications: "গ্যাস্ট্রিক এসিডিটি ও পেপটিক আলসার চিকিৎসায় নির্দেশিত।",
-    dosage: "১টি করে ক্যাপসুল দিনে ১-২ বার খাবারের পূর্বে সেব্য।"
-  },
-  {
-    id: "med-4",
-    brand: "Ceevit",
-    generic: "Ascorbic Acid (Vitamin C)",
-    company: "Square Pharmaceuticals Ltd.",
-    strength: "250 mg",
+    brand: "3 Bion",
+    generic: "Vitamin B1 + Vitamin B6 + Vitamin B12",
+    company: "Jenphar Bangladesh Ltd.",
+    strength: "100mg+200mg+200mcg",
     category: "Vitamin",
     dosageForm: "Tablet",
-    priceTk: "1.75",
+    priceTk: "12.00",
     requiresRx: false,
-    indications: "ভিটামিন সি এর ঘাটতি পূরণ ও রোগ প্রতিরোধ ক্ষমতা বৃদ্ধিতে নির্দেশিত।"
-  },
-  {
-    id: "med-5",
-    brand: "Monas 10",
-    generic: "Montelukast",
-    company: "Acme Laboratories Ltd.",
-    strength: "10 mg",
-    category: "Allergy",
-    dosageForm: "Tablet",
-    priceTk: "16.00",
-    requiresRx: true,
-    indications: "অ্যাজমা, শ্বাসকষ্ট ও সিজনাল অ্যালার্জি নিরাময়ে নির্দেশিত।"
+    imageUrl: "https://medex.com.bd/cdn/img/medicines/3-bion.png",
+    indications: "ভিটামিন বি১, বি৬ এবং বি১২ এর ঘাটতি পূরণ, নিউরোপ্যাথি এবং স্নায়বিক ব্যথায় নির্দেশিত।",
+    dosage: "প্রতিদিন ১টি করে ট্যাবলেট দিনে ১ থেকে ৩ বার চিকিৎসকের পরামর্শ অনুযায়ী সেব্য।"
   }
 ];

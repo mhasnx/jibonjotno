@@ -14,7 +14,7 @@ import { MedicineCardSkeleton } from "@/components/ui/Skeleton";
 function MedicineCardThumbnail({ item }: { item: CatalogItem }) {
   const [imgErr, setImgErr] = useState(false);
 
-  const cleanBrand = encodeURIComponent((item.brand || "").trim().toLowerCase());
+  const cleanBrand = encodeURIComponent((item.brand || "").trim().toLowerCase().replace(/\s+/g, "-"));
   const fallbackUrl = `https://medex.com.bd/cdn/img/medicines/${cleanBrand}.png`;
   const imgSrc = item.imageUrl && !imgErr ? item.imageUrl : fallbackUrl;
 

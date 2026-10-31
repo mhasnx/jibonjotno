@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { logoutAdminSession } from "@/lib/auth/clearAdminClientSession";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -12,23 +13,45 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   useEffect(() => {
+    let cancelled = false;
     setMounted(true);
-    try {
-      const sessionStr = localStorage.getItem("jj_admin_session");
-      if (!sessionStr) {
-        router.push("/admin-login");
-        return;
+
+    async function verifySession() {
+      try {
+        const response = await fetch("/api/auth/session", { credentials: "include" });
+        if (!response.ok) {
+          await logoutAdminSession();
+          if (!cancelled) router.push("/admin-login");
+          return;
+        }
+        const data = await response.json();
+        const email = data?.user?.email || "";
+        if (!email) {
+          await logoutAdminSession();
+          if (!cancelled) router.push("/admin-login");
+          return;
+        }
+        try {
+          localStorage.setItem(
+            "jj_admin_session",
+            JSON.stringify({ email, name: "Md Mahmudul Hassan", role: "SUPER_ADMIN" })
+          );
+        } catch {
+          // ignore storage errors
+        }
+        if (!cancelled) {
+          setAdminEmail(email);
+          setAuthenticated(true);
+        }
+      } catch {
+        if (!cancelled) router.push("/admin-login");
       }
-      const session = JSON.parse(sessionStr);
-      if (session && session.email === "mahmudulhm2003@gmail.com") {
-        setAuthenticated(true);
-        setAdminEmail(session.email);
-      } else {
-        router.push("/admin-login");
-      }
-    } catch {
-      router.push("/admin-login");
     }
+
+    verifySession();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   if (!mounted || !authenticated) {
@@ -52,8 +75,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "অডিট লগ ও সিকিউরিটি", href: "/admin/audit", icon: "🛡️" },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem("jj_admin_session");
+  const handleLogout = async () => {
+    await logoutAdminSession();
     router.push("/admin-login");
   };
 

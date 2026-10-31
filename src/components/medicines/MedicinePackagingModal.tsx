@@ -29,18 +29,17 @@ export default function MedicinePackagingModal({
   const stripPrice = (unitPrice * 10).toFixed(2);
   const boxPrice = (unitPrice * 60).toFixed(2);
 
-  // Fallback image resolver from BD pharma CDNs if imageUrl is missing
+  // Dynamic image resolver with BD Pharma CDNs
   const getMedicineImage = (med: CatalogItem) => {
-    if (med.imageUrl && !imgError && med.imageUrl.startsWith("http")) {
+    if (med.imageUrl && med.imageUrl.startsWith("http")) {
       return med.imageUrl;
     }
-    const cleanBrand = encodeURIComponent(med.brand.trim());
-    return `https://medex.com.bd/cdn/img/medicines/${cleanBrand.toLowerCase()}.png`;
+    const cleanBrand = encodeURIComponent((med.brand || "").trim().toLowerCase().replace(/\s+/g, "-"));
+    return `https://medex.com.bd/cdn/img/medicines/${cleanBrand}.png`;
   };
 
-  const currentImageSrc = getMedicineImage(medicine);
+  const imageSrc = getMedicineImage(medicine);
 
-  // Extract YouTube Embed URL
   const getYoutubeEmbed = (url?: string) => {
     if (!url) return null;
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]{11})/);
@@ -87,8 +86,8 @@ export default function MedicinePackagingModal({
         className="bg-white rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl border border-emerald-900/20 my-auto max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header With Real Packaging Picture & Medicine Identity */}
-        <div className="bg-gradient-to-br from-[#0a3528] via-[#0f4c3a] to-[#06231b] text-white p-5 sm:p-7 relative">
+        {/* Top Header with Real Packaging Image, 3D Box & Identity */}
+        <div className="bg-gradient-to-br from-[#0a3528] via-[#0f4c3a] to-[#06231b] text-white p-5 sm:p-7 relative shrink-0">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/15 hover:bg-rose-600 text-white flex items-center justify-center font-black transition cursor-pointer"
@@ -97,12 +96,12 @@ export default function MedicinePackagingModal({
           </button>
 
           <div className="flex flex-col md:flex-row gap-6 items-center">
-            {/* Real Packaging Image & 3D Switcher Box */}
+            {/* Visual Box / Image / Foil View */}
             <div className="w-full md:w-64 shrink-0 flex flex-col items-center">
               {viewMode === "IMAGE" && !imgError ? (
-                <div className="w-60 h-44 bg-white rounded-2xl p-2.5 flex items-center justify-center shadow-xl border-2 border-emerald-300 relative overflow-hidden group">
+                <div className="w-60 h-44 bg-white rounded-2xl p-2.5 flex items-center justify-center shadow-xl border-2 border-emerald-400/50 relative overflow-hidden group">
                   <img
-                    src={currentImageSrc}
+                    src={imageSrc}
                     alt={medicine.brand}
                     referrerPolicy="no-referrer"
                     onError={() => {
@@ -111,13 +110,12 @@ export default function MedicinePackagingModal({
                     }}
                     className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
                   />
-                  <span className="absolute bottom-1 right-2 bg-slate-900/70 text-[9px] font-bold text-white px-2 py-0.5 rounded">
+                  <span className="absolute bottom-1 right-2 bg-slate-900/80 text-[9px] font-bold text-emerald-300 px-2 py-0.5 rounded">
                     অরিজিনাল মোড়ক
                   </span>
                 </div>
               ) : viewMode === "PACK" || imgError ? (
-                /* Realistic 3D Box Packaging Mockup */
-                <div className="w-60 h-44 rounded-2xl bg-gradient-to-br from-white via-slate-50 to-emerald-50 text-slate-900 p-4 shadow-2xl border-2 border-emerald-300 relative overflow-hidden flex flex-col justify-between">
+                <div className="w-60 h-44 rounded-2xl bg-gradient-to-br from-white via-slate-50 to-emerald-50 text-slate-900 p-4 shadow-2xl border-2 border-emerald-400 relative overflow-hidden flex flex-col justify-between">
                   <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#0f4c3a] via-emerald-500 to-amber-500" />
                   <div className="flex justify-between items-start pt-1">
                     <span className="text-[9px] font-black uppercase tracking-wider bg-[#0f4c3a] text-white px-2 py-0.5 rounded">
@@ -144,10 +142,9 @@ export default function MedicinePackagingModal({
                   </div>
                 </div>
               ) : (
-                /* Realistic Blister Foil Strip */
                 <div className="w-60 h-44 rounded-2xl bg-gradient-to-br from-slate-200 via-slate-100 to-slate-300 text-slate-800 p-3.5 shadow-2xl border-2 border-slate-400 flex flex-col justify-between">
                   <div className="text-[9px] font-black text-center text-slate-600 uppercase tracking-widest border-b border-slate-300 pb-1">
-                    {medicine.brand} • Blister Foil Strip (10 Units)
+                    {medicine.brand} • Blister Foil Strip
                   </div>
                   <div className="grid grid-cols-5 gap-2 my-auto py-2 px-1">
                     {Array.from({ length: 10 }).map((_, idx) => (
@@ -165,14 +162,13 @@ export default function MedicinePackagingModal({
                 </div>
               )}
 
-              {/* View Switch Buttons */}
               <div className="flex gap-1.5 mt-2.5">
                 {!imgError && (
                   <button
                     type="button"
                     onClick={() => setViewMode("IMAGE")}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-black cursor-pointer transition ${
-                      viewMode === "IMAGE" ? "bg-amber-400 text-slate-950" : "bg-white/15 text-emerald-100 hover:bg-white/25"
+                      viewMode === "IMAGE" ? "bg-amber-400 text-slate-950" : "bg-white/15 text-emerald-100"
                     }`}
                   >
                     📷 ছবি
@@ -182,7 +178,7 @@ export default function MedicinePackagingModal({
                   type="button"
                   onClick={() => setViewMode("PACK")}
                   className={`px-2.5 py-1 rounded-lg text-[10px] font-black cursor-pointer transition ${
-                    viewMode === "PACK" ? "bg-amber-400 text-slate-950" : "bg-white/15 text-emerald-100 hover:bg-white/25"
+                    viewMode === "PACK" ? "bg-amber-400 text-slate-950" : "bg-white/15 text-emerald-100"
                   }`}
                 >
                   📦 ৩ডি বক্স
@@ -191,15 +187,15 @@ export default function MedicinePackagingModal({
                   type="button"
                   onClick={() => setViewMode("STRIP")}
                   className={`px-2.5 py-1 rounded-lg text-[10px] font-black cursor-pointer transition ${
-                    viewMode === "STRIP" ? "bg-amber-400 text-slate-950" : "bg-white/15 text-emerald-100 hover:bg-white/25"
+                    viewMode === "STRIP" ? "bg-amber-400 text-slate-950" : "bg-white/15 text-emerald-100"
                   }`}
                 >
-                  💊 পাতা (Strip)
+                  💊 পাতা ভিউ
                 </button>
               </div>
             </div>
 
-            {/* Main Header Specs */}
+            {/* Medicine Identity Info */}
             <div className="flex-1 space-y-2.5 text-center md:text-left">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                 <span className="bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 text-[10px] font-black px-3 py-0.5 rounded-full uppercase">
@@ -233,7 +229,7 @@ export default function MedicinePackagingModal({
                     href={(medicine as any).youtubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-xs font-black px-4 py-2 rounded-xl shadow-md transition cursor-pointer"
+                    className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-xs font-black px-4 py-2 rounded-xl shadow-md transition"
                   >
                     <span>▶</span> YouTube ভিডিও গাইড দেখুন
                   </a>
@@ -243,9 +239,8 @@ export default function MedicinePackagingModal({
           </div>
         </div>
 
-        {/* Scrollable Details & Clinical Info */}
+        {/* Scrollable Clinical Details & Alternative Brands */}
         <div className="p-5 sm:p-7 overflow-y-auto space-y-5 bg-slate-50/70 flex-1">
-          {/* YouTube Video Player Embed if present */}
           {ytEmbed && (
             <div className="bg-white rounded-2xl p-4 border border-red-200 shadow-sm space-y-2">
               <h4 className="text-xs font-black text-red-600 uppercase flex items-center gap-1.5">
@@ -263,7 +258,7 @@ export default function MedicinePackagingModal({
             </div>
           )}
 
-          {/* Pricing Info & Order Action */}
+          {/* Pricing Info */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="space-y-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
@@ -327,12 +322,12 @@ export default function MedicinePackagingModal({
             </div>
           </div>
 
-          {/* Alternative Brands List with Savings */}
+          {/* Alternative Brands */}
           {alternatives.length > 0 && (
             <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 space-y-3">
               <div className="flex justify-between items-center">
                 <h4 className="text-xs sm:text-sm font-black text-slate-900">
-                  🔄 একই জেনেরিকের বিকল্প ব্র্যান্ড ও মূল্যের তুলনা ({medicine.generic})
+                  🔄 একই জেনেরিকের বিকল্প ব্র্যান্ড ({medicine.generic})
                 </h4>
                 <a
                   href={`/compare?generic=${encodeURIComponent(medicine.generic)}`}

@@ -127,7 +127,7 @@ export default function FullAdminDashboard() {
     localStorage.setItem("jj_medicine_overrides", JSON.stringify(overrides));
 
     setEditingMed(null);
-    showToast(`✓ "${updated.brand}" এর তথ্য, মূল্য ও YouTube লিংক সফলভাবে সংরক্ষিত হয়েছে!`);
+    showToast(`✓ "${updated.brand}" এর তথ্য, মূল্য ও YouTube লিংক সংরক্ষিত হয়েছে!`);
   };
 
   const handleAddNew = (e: React.FormEvent) => {
