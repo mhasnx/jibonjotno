@@ -1,517 +1,548 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
+import React, { useState, useEffect } from "react";
 import { MASTER_CATALOG, CatalogItem } from "@/data/medicinesCatalog";
 
-export default function FullAdminDashboard() {
-  const [activeTab, setActiveTab] = useState<"CATALOG" | "ADD_NEW">("CATALOG");
-  const [medicines, setMedicines] = useState<CatalogItem[]>(MASTER_CATALOG as any);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+export default function AdminPage() {
+  const [medicines, setMedicines] = useState<CatalogItem[]>(MASTER_CATALOG);
+  const [totalCount, setTotalCount] = useState(35941);
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 30;
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Edit State
-  const [editingMed, setEditingMed] = useState<any | null>(null);
-  const [editBrand, setEditBrand] = useState("");
-  const [editGeneric, setEditGeneric] = useState("");
-  const [editCompany, setEditCompany] = useState("");
-  const [editStrength, setEditStrength] = useState("");
-  const [editDosage, setEditDosage] = useState("Tablet");
-  const [editCategory, setEditCategory] = useState("Gastric");
-  const [editPrice, setEditPrice] = useState("");
-  const [editImageUrl, setEditImageUrl] = useState("");
-  const [editYoutubeUrl, setEditYoutubeUrl] = useState("");
-  const [editRx, setEditRx] = useState(false);
+  const [editingItem, setEditingItem] = useState<CatalogItem | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
-  // Add New State
-  const [newBrand, setNewBrand] = useState("");
-  const [newGeneric, setNewGeneric] = useState("");
-  const [newCompany, setNewCompany] = useState("");
-  const [newStrength, setNewStrength] = useState("");
-  const [newDosage, setNewDosage] = useState("Tablet");
-  const [newCategory, setNewCategory] = useState("Gastric");
-  const [newPrice, setNewPrice] = useState("");
-  const [newImageUrl, setNewImageUrl] = useState("");
-  const [newYoutubeUrl, setNewYoutubeUrl] = useState("");
-  const [newRx, setNewRx] = useState(false);
-
-  const [toast, setToast] = useState("");
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3500);
-  };
+  const [formBrand, setFormBrand] = useState("");
+  const [formGeneric, setFormGeneric] = useState("");
+  const [formCompany, setFormCompany] = useState("");
+  const [formPrice, setFormPrice] = useState("");
+  const [formStrength, setFormStrength] = useState("");
+  const [formCategory, setFormCategory] = useState<CatalogItem["category"]>("Gastric");
+  const [formDosageForm, setFormDosageForm] = useState<CatalogItem["dosageForm"]>("Tablet");
+  const [formRequiresRx, setFormRequiresRx] = useState(false);
+  const [formImageUrl, setFormImageUrl] = useState("");
 
   useEffect(() => {
     setIsLoading(true);
-    const customSaved = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("jj_custom_medicines") || "[]") : [];
-    const priceOverrides = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("jj_medicine_overrides") || "{}") : {};
+    const queryStr = new URLSearchParams({
+      q: searchTerm,
+      limit: "50",
+      page: currentPage.toString(),
+    }).toString();
 
-    fetch("/data/all_medicines.json")
-      .then((r) => (r.ok ? r.json() : null))
+    fetch(`/api/medicines?${queryStr}`)
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const baseList: any[] = Array.isArray(data) && data.length > 0 ? [...MASTER_CATALOG, ...data] : MASTER_CATALOG;
-        const merged = baseList.map((item: any) =>
-          priceOverrides[item.id] ? { ...item, ...priceOverrides[item.id] } : item
-        );
-        setMedicines([...customSaved, ...merged] as any);
+        if (data && Array.isArray(data.items)) {
+          setMedicines(data.items as CatalogItem[]);
+          setTotalCount(data.total || 35941);
+        }
       })
-      .catch(() => {
-        setMedicines([...customSaved, ...MASTER_CATALOG] as any);
-      })
+      .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [searchTerm, currentPage]);
 
   const handleLogout = () => {
-    localStorage.removeItem("jj_admin_session");
-    localStorage.removeItem("admin_authenticated");
-    document.cookie = "admin_token=; path=/; max-age=0";
+    document.cookie = "admin_auth=; path=/; max-age=0";
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("jj_admin_session");
+    }
     window.location.href = "/admin-login";
   };
 
-  const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return medicines.filter((m: any) => {
-      if (!q) return true;
-      return (
-        (m.brand || "").toLowerCase().includes(q) ||
-        (m.generic || "").toLowerCase().includes(q) ||
-        (m.company || "").toLowerCase().includes(q)
-      );
-    });
-  }, [medicines, searchQuery]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage]);
-
-  const openEdit = (med: any) => {
-    setEditingMed(med);
-    setEditBrand(med.brand || "");
-    setEditGeneric(med.generic || "");
-    setEditCompany(med.company || "");
-    setEditStrength(med.strength || "");
-    setEditDosage(med.dosageForm || "Tablet");
-    setEditCategory(med.category || "Gastric");
-    setEditPrice(med.priceTk || "5.00");
-    setEditImageUrl(med.imageUrl || "");
-    setEditYoutubeUrl(med.youtubeUrl || "");
-    setEditRx(Boolean(med.requiresRx));
+  const startEditing = (med: CatalogItem) => {
+    setEditingItem(med);
+    setFormBrand(med.brand || "");
+    setFormGeneric(med.generic || "");
+    setFormCompany(med.company || "");
+    setFormPrice(med.priceTk || "5.00");
+    setFormStrength(med.strength || "");
+    setFormCategory((med.category || "Gastric") as CatalogItem["category"]);
+    setFormDosageForm((med.dosageForm || "Tablet") as CatalogItem["dosageForm"]);
+    setFormRequiresRx(!!med.requiresRx);
+    setFormImageUrl(med.imageUrl || "");
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingMed) return;
+    if (!editingItem) return;
 
-    const updated = {
-      ...editingMed,
-      brand: editBrand,
-      generic: editGeneric,
-      company: editCompany,
-      strength: editStrength,
-      dosageForm: editDosage,
-      category: editCategory,
-      priceTk: editPrice,
-      imageUrl: editImageUrl || "",
-      youtubeUrl: editYoutubeUrl || "",
-      requiresRx: editRx,
-    };
+    const updatedList = medicines.map((med) => {
+      if (med.id === editingItem.id) {
+        return {
+          ...med,
+          brand: formBrand,
+          generic: formGeneric,
+          company: formCompany,
+          priceTk: formPrice,
+          strength: formStrength,
+          category: formCategory,
+          dosageForm: formDosageForm,
+          requiresRx: formRequiresRx,
+          imageUrl: formImageUrl || "",
+        } as CatalogItem;
+      }
+      return med;
+    });
 
-    setMedicines((prev: any[]) => prev.map((m) => (m.id === editingMed.id ? updated : m)));
-    const overrides = JSON.parse(localStorage.getItem("jj_medicine_overrides") || "{}");
-    overrides[editingMed.id] = updated;
-    localStorage.setItem("jj_medicine_overrides", JSON.stringify(overrides));
-
-    setEditingMed(null);
-    showToast(`✓ "${updated.brand}" এর তথ্য, মূল্য ও YouTube লিংক সংরক্ষিত হয়েছে!`);
+    setMedicines(updatedList);
+    setSuccessMsg(`"${formBrand}"-এর তথ্য ও মূল্য আপডেট হয়েছে!`);
+    setEditingItem(null);
+    setTimeout(() => setSuccessMsg(""), 3500);
   };
 
   const handleAddNew = (e: React.FormEvent) => {
     e.preventDefault();
-    const newItem = {
-      id: "jj-med-" + Date.now(),
-      brand: newBrand,
-      generic: newGeneric,
-      company: newCompany,
-      strength: newStrength || "500 mg",
-      dosageForm: newDosage,
-      category: newCategory,
-      priceTk: newPrice || "5.00",
-      imageUrl: newImageUrl || "",
-      youtubeUrl: newYoutubeUrl || "",
-      requiresRx: newRx,
-    };
+    const newItem: CatalogItem = {
+      id: "med-" + Date.now(),
+      brand: formBrand,
+      generic: formGeneric,
+      company: formCompany,
+      priceTk: formPrice || "10.00",
+      strength: formStrength || "500mg",
+      category: formCategory,
+      dosageForm: formDosageForm,
+      requiresRx: formRequiresRx,
+      imageUrl: formImageUrl || "",
+    } as CatalogItem;
 
-    setMedicines((prev: any[]) => [newItem, ...prev]);
-    const existing = JSON.parse(localStorage.getItem("jj_custom_medicines") || "[]");
-    localStorage.setItem("jj_custom_medicines", JSON.stringify([newItem, ...existing]));
+    setMedicines([newItem, ...medicines]);
+    setTotalCount((prev) => prev + 1);
+    setSuccessMsg(`নতুন ওষুধ "${formBrand}" সফলভাবে যুক্ত হয়েছে!`);
+    setIsAddingNew(false);
+    resetForm();
+    setTimeout(() => setSuccessMsg(""), 3500);
+  };
 
-    setNewBrand("");
-    setNewGeneric("");
-    setNewCompany("");
-    setNewStrength("");
-    setNewPrice("");
-    setNewImageUrl("");
-    setNewYoutubeUrl("");
-    setActiveTab("CATALOG");
-    showToast(`✓ নতুন ওষুধ "${newItem.brand}" ডাটাবেজে যুক্ত হয়েছে!`);
+  const resetForm = () => {
+    setFormBrand("");
+    setFormGeneric("");
+    setFormCompany("");
+    setFormPrice("");
+    setFormStrength("");
+    setFormCategory("Gastric");
+    setFormDosageForm("Tablet");
+    setFormRequiresRx(false);
+    setFormImageUrl("");
   };
 
   return (
-    <div className="min-h-screen bg-[#071310] text-slate-100 flex flex-col font-sans">
-      <header className="bg-[#0b1f1a] border-b border-emerald-900/60 px-4 md:px-8 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-40 shadow-lg">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans pb-12">
+      <header className="bg-slate-950 border-b border-slate-800 px-6 py-4 flex justify-between items-center shadow-md">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center font-black text-white shadow-md">
-            জ
-          </div>
-          <div>
-            <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase border border-emerald-500/30">
-              SUPER ADMIN HUB
-            </span>
-            <h1 className="text-lg md:text-xl font-black text-white mt-0.5">
-              জীবনযত্ন প্রশাসনিক পোর্টাল
-            </h1>
-          </div>
+          <span className="bg-emerald-600 text-white text-xs font-black px-3 py-1 rounded-lg uppercase tracking-wider">
+            Super Admin Hub
+          </span>
+          <h1 className="text-xl font-black text-white">জীবনযত্ন প্রশাসনিক পোর্টাল</h1>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <Link
-            href="/medicines"
-            className="bg-emerald-950 hover:bg-emerald-900 text-emerald-200 border border-emerald-700/50 text-xs font-bold px-3.5 py-2 rounded-xl transition"
+        <div className="flex items-center space-x-4">
+          <a
+            href="/"
+            target="_blank"
+            className="text-xs font-bold text-slate-300 hover:text-emerald-400 transition"
           >
-            💊 পাবলিক ক্যাটালগ
-          </Link>
+            🌐 ভিজিট লাইভ সাইট
+          </a>
           <button
             onClick={handleLogout}
-            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black px-4 py-2 rounded-xl transition cursor-pointer shadow-md"
+            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer shadow-sm"
           >
-            লগআউট
+            লগআউট করুন
           </button>
         </div>
       </header>
 
-      {toast && (
-        <div className="fixed bottom-6 right-6 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-black z-50">
-          {toast}
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 flex-1 w-full space-y-6">
+        {successMsg && (
+          <div className="bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 px-5 py-3 rounded-2xl text-sm font-bold flex items-center space-x-2">
+            <span>✓ {successMsg}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-sm flex flex-col justify-between">
+            <span className="text-xs text-slate-400 font-bold uppercase">মোট ওষুধ ডাটাবেজ</span>
+            <div className="text-3xl font-black text-emerald-400 font-mono mt-2">
+              {totalCount.toLocaleString()} +
+            </div>
+            <span className="text-[11px] text-slate-500 mt-1">সক্রিয় ক্যাটালগ আইটেম</span>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-sm flex flex-col justify-between">
+            <span className="text-xs text-slate-400 font-bold uppercase">নতুন ওষুধ যুক্ত করুন</span>
+            <button
+              onClick={() => {
+                resetForm();
+                setIsAddingNew(true);
+                setEditingItem(null);
+              }}
+              className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black py-2.5 px-4 rounded-xl transition cursor-pointer shadow-md"
+            >
+              + নতুন ওষুধ এন্ট্রি করুন
+            </button>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-sm flex flex-col justify-between">
+            <span className="text-xs text-slate-400 font-bold uppercase">এডমিন স্ট্যাটাস</span>
+            <div className="text-sm font-black text-amber-400 mt-2 flex items-center space-x-1.5">
+              <span>🛡️ Full Edit & Picture Upload Active</span>
+            </div>
+            <span className="text-[11px] text-slate-500 mt-1">অ্যাক্সেস লেভেল: সুপার অ্যাডমিন</span>
+          </div>
         </div>
-      )}
 
-      <div className="bg-[#091915] border-b border-emerald-950 px-4 md:px-8 py-3 flex items-center gap-2 overflow-x-auto">
-        {[
-          { id: "CATALOG", label: "💊 ওষুধ মূল্য, ছবি ও YouTube ভিডিও এডিটর" },
-          { id: "ADD_NEW", label: "➕ নতুন ওষুধ ও ভিডিও যোগ করুন" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer ${
-              activeTab === tab.id ? "bg-emerald-500 text-slate-950" : "bg-slate-900 text-slate-300 hover:bg-slate-800"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <main className="max-w-7xl mx-auto px-4 md:px-8 py-6 flex-1 w-full space-y-6">
-        {activeTab === "CATALOG" && (
-          <div className="bg-[#0b1f1a] border border-emerald-900/50 rounded-3xl p-6 space-y-5 shadow-xl">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div>
-                <h2 className="text-lg font-black text-white">
-                  সম্পূর্ণ ওষুধ তালিকা ও মাল্টিমিডিয়া এডিটর
-                </h2>
-                <p className="text-xs text-slate-400">
-                  মোট ডেটাবেজ: <strong className="text-emerald-400">{medicines.length.toLocaleString()}</strong> টি ওষুধ
-                </p>
-              </div>
-
+        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-sm space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="text-lg font-black text-white">ওষুধের মূল্য, ছবি ও ক্যাটালগ ম্যানেজমেন্ট</h2>
+              <p className="text-xs text-slate-400">৩৫,৯৪১+ ডাটাবেজ থেকে যেকোনো ওষুধ খুঁজুন এবং এডিট করুন</p>
+            </div>
+            <div className="w-full md:w-96">
               <input
                 type="text"
-                value={searchQuery}
+                value={searchTerm}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
+                  setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="ব্র্যান্ড বা জেনেরিক খুঁজুন..."
-                className="w-full sm:w-80 bg-[#071310] border border-emerald-800/80 text-white text-xs px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-400"
+                placeholder="ওষুধ, জেনেরিক বা কোম্পানির নাম দিয়ে খুঁজুন..."
+                className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500"
               />
             </div>
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-emerald-900/60 text-[11px] text-slate-400 uppercase">
-                    <th className="py-3.5 px-4">ব্র্যান্ড ও শক্তি</th>
-                    <th className="py-3.5 px-4">জেনেরিক নাম</th>
-                    <th className="py-3.5 px-4">কোম্পানি</th>
-                    <th className="py-3.5 px-4">মূল্য (BDT)</th>
-                    <th className="py-3.5 px-4">YouTube ভিডিও</th>
-                    <th className="py-3.5 px-4 text-right">অ্যাকশন</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 text-[11px] text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-4">ছবি</th>
+                  <th className="py-3 px-4">ব্র্যান্ড ও শক্তি</th>
+                  <th className="py-3 px-4">জেনেরিক নাম</th>
+                  <th className="py-3 px-4">কোম্পানি</th>
+                  <th className="py-3 px-4">মূল্য (BDT)</th>
+                  <th className="py-3 px-4 text-right">অ্যাকশন</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-xs">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      ডাটাবেজ লোড হচ্ছে...
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-emerald-950/80 text-xs">
-                  {paginated.map((med: any) => (
-                    <tr key={med.id} className="hover:bg-emerald-950/30 transition">
-                      <td className="py-3.5 px-4">
-                        <div className="font-black text-white text-sm">
-                          {med.brand} <span className="text-emerald-400 font-mono text-xs">{med.strength}</span>
-                        </div>
-                        <span className="text-[10px] text-slate-400">{med.dosageForm}</span>
+                ) : medicines.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      কোনো ওষুধ পাওয়া যায়নি।
+                    </td>
+                  </tr>
+                ) : (
+                  medicines.map((med) => (
+                    <tr key={med.id} className="hover:bg-slate-900/50 transition">
+                      <td className="py-3 px-4">
+                        {med.imageUrl ? (
+                          <img
+                            src={med.imageUrl}
+                            alt={med.brand}
+                            className="w-10 h-10 object-contain rounded-lg bg-white p-1 border border-slate-700"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-[9px] font-bold text-slate-400">
+                            No Pic
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-white">
+                        {med.brand}{" "}
+                        <span className="text-emerald-400 font-mono text-[11px]">{med.strength}</span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-300">{med.generic}</td>
                       <td className="py-3.5 px-4 text-slate-400">{med.company}</td>
-                      <td className="py-3.5 px-4 font-mono font-black text-amber-400">৳ {med.priceTk}</td>
-                      <td className="py-3.5 px-4">
-                        {med.youtubeUrl ? (
-                          <a
-                            href={med.youtubeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-red-600/20 text-red-400 border border-red-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 hover:bg-red-600 hover:text-white transition"
-                          >
-                            ▶ ভিডিও লিংক
-                          </a>
-                        ) : (
-                          <span className="text-[10px] text-slate-600">নাই</span>
-                        )}
+                      <td className="py-3.5 px-4 font-mono font-black text-amber-300">
+                        ৳ {med.priceTk}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <button
-                          onClick={() => openEdit(med)}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-bold transition cursor-pointer"
+                          onClick={() => startEditing(med)}
+                          className="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer"
                         >
-                          ✏️ এডিট তথ্য ও ভিডিও
+                          ✏️ এডিট মূল্য/ছবি
                         </button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex justify-between items-center pt-4 border-t border-emerald-900/40">
-                <span className="text-xs text-slate-400">
-                  ফলাফল: <strong className="text-white">{filtered.length}</strong> টি
-                </span>
-                <div className="flex items-center space-x-2">
-                  <button
-                    disabled={currentPage <= 1}
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-xs font-bold disabled:opacity-40"
-                  >
-                    ← পূর্ববর্তী
-                  </button>
-                  <span className="text-xs font-mono bg-[#071310] px-3 py-1.5 rounded-xl border border-emerald-900">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    disabled={currentPage >= totalPages}
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-xs font-bold disabled:opacity-40"
-                  >
-                    পরবর্তী →
-                  </button>
-                </div>
-              </div>
-            )}
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
 
-        {activeTab === "ADD_NEW" && (
-          <div className="bg-[#0b1f1a] border border-emerald-900/50 rounded-3xl p-6 max-w-3xl mx-auto space-y-5 shadow-xl">
-            <h2 className="text-lg font-black text-white">➕ নতুন ওষুধ ও YouTube ভিডিও যোগ করুন</h2>
-            <form onSubmit={handleAddNew} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">ব্র্যান্ড নাম *</label>
-                  <input
-                    type="text"
-                    value={newBrand}
-                    onChange={(e) => setNewBrand(e.target.value)}
-                    placeholder="যেমন: Napa Extend"
-                    required
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">শক্তি (Strength) *</label>
-                  <input
-                    type="text"
-                    value={newStrength}
-                    onChange={(e) => setNewStrength(e.target.value)}
-                    placeholder="যেমন: 665 mg"
-                    required
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">জেনেরিক নাম *</label>
-                  <input
-                    type="text"
-                    value={newGeneric}
-                    onChange={(e) => setNewGeneric(e.target.value)}
-                    placeholder="যেমন: Paracetamol"
-                    required
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">কোম্পানির নাম *</label>
-                  <input
-                    type="text"
-                    value={newCompany}
-                    onChange={(e) => setNewCompany(e.target.value)}
-                    placeholder="যেমন: Beximco Pharmaceuticals Ltd."
-                    required
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">ইউনিট মূল্য (BDT) *</label>
-                  <input
-                    type="text"
-                    value={newPrice}
-                    onChange={(e) => setNewPrice(e.target.value)}
-                    placeholder="যেমন: 2.00"
-                    required
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-amber-300 font-mono font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-red-400 font-bold block mb-1">▶ YouTube ভিডিও লিঙ্ক (ঐচ্ছিক)</label>
-                  <input
-                    type="url"
-                    value={newYoutubeUrl}
-                    onChange={(e) => setNewYoutubeUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="w-full bg-[#071310] border border-red-700/60 text-xs p-3 rounded-xl text-white font-mono"
-                  />
-                </div>
-              </div>
-
+          <div className="flex justify-between items-center pt-4 border-t border-slate-800">
+            <span className="text-xs text-slate-400">
+              Page {currentPage} (Showing {medicines.length} items)
+            </span>
+            <div className="space-x-2">
               <button
-                type="submit"
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 rounded-xl text-xs transition cursor-pointer shadow-lg"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 disabled:opacity-40"
               >
-                ✓ ওষুধ ও তথ্য সংরক্ষণ করুন
+                ← Prev
               </button>
-            </form>
+              <button
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300"
+              >
+                Next →
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </main>
 
-      {/* Edit Modal */}
-      {editingMed && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0b1f1a] border border-emerald-700/60 w-full max-w-xl p-6 rounded-3xl space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b border-emerald-900 pb-3">
-              <h3 className="text-base font-black text-white">
-                ✏️ ওষুধের তথ্য ও YouTube লিংক এডিট ({editingMed.brand})
-              </h3>
+      {editingItem && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-slate-950 border border-slate-800 w-full max-w-lg p-6 rounded-3xl space-y-4 shadow-2xl my-8">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-base font-black text-white">ওষুধের তথ্য, মূল্য ও ছবি এডিট করুন</h3>
               <button
-                onClick={() => setEditingMed(null)}
-                className="text-slate-400 hover:text-white font-black text-sm cursor-pointer"
+                onClick={() => setEditingItem(null)}
+                className="text-slate-400 hover:text-white font-black text-sm"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-300 block mb-1">ব্র্যান্ড নাম</label>
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">ব্র্যান্ড নাম ও শক্তি</label>
+                <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
-                    value={editBrand}
-                    onChange={(e) => setEditBrand(e.target.value)}
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
+                    value={formBrand}
+                    onChange={(e) => setFormBrand(e.target.value)}
+                    className="bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
                     required
                   />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-300 block mb-1">শক্তি</label>
                   <input
                     type="text"
-                    value={editStrength}
-                    onChange={(e) => setEditStrength(e.target.value)}
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-300 block mb-1">জেনেরিক নাম</label>
-                  <input
-                    type="text"
-                    value={editGeneric}
-                    onChange={(e) => setEditGeneric(e.target.value)}
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-300 block mb-1">কোম্পানির নাম</label>
-                  <input
-                    type="text"
-                    value={editCompany}
-                    onChange={(e) => setEditCompany(e.target.value)}
-                    className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
+                    value={formStrength}
+                    onChange={(e) => setFormStrength(e.target.value)}
+                    className="bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs text-amber-300 font-bold block mb-1">ইউনিট মূল্য (BDT)</label>
+                <label className="text-xs text-slate-400 block mb-1">জেনেরিক নাম</label>
                 <input
                   type="text"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                  className="w-full bg-[#071310] border border-amber-500/70 text-xs p-3 rounded-xl text-amber-300 font-mono font-black"
+                  value={formGeneric}
+                  onChange={(e) => setFormGeneric(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
                   required
                 />
               </div>
 
-              <div className="bg-red-950/30 border border-red-800/50 p-3.5 rounded-2xl space-y-1.5">
-                <label className="text-xs text-red-300 font-black flex items-center gap-1.5">
-                  <span>▶</span> YouTube Video Hyperlink / Guide URL
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">কোম্পানির নাম</label>
+                <input
+                  type="text"
+                  value={formCompany}
+                  onChange={(e) => setFormCompany(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">মূল্য (BDT)</label>
+                  <input
+                    type="text"
+                    value={formPrice}
+                    onChange={(e) => setFormPrice(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">ক্যাটাগরি</label>
+                  <select
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value as CatalogItem["category"])}
+                    className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
+                  >
+                    <option value="Gastric">Gastric</option>
+                    <option value="Fever">Fever & Pain</option>
+                    <option value="Antibiotic">Antibiotic</option>
+                    <option value="Allergy">Allergy</option>
+                    <option value="Vitamin">Vitamin</option>
+                    <option value="Cardiac">Cardiac</option>
+                    <option value="Diabetes">Diabetes</option>
+                    <option value="Equipment">Medical Device</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">
+                  ছবি / Picture URL (অনলাইন ইমেজ লিঙ্ক)
                 </label>
                 <input
                   type="url"
-                  value={editYoutubeUrl}
-                  onChange={(e) => setEditYoutubeUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full bg-[#071310] border border-red-700/70 text-xs p-3 rounded-xl text-white font-mono focus:outline-none"
+                  value={formImageUrl}
+                  onChange={(e) => setFormImageUrl(e.target.value)}
+                  placeholder="https://example.com/medicine-image.jpg"
+                  className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
+                />
+                {formImageUrl && (
+                  <div className="mt-2 flex items-center space-x-2">
+                    <span className="text-[10px] text-slate-400">লাইভ প্রিভিউ:</span>
+                    <img src={formImageUrl} alt="Preview" className="w-9 h-9 object-contain rounded bg-white p-1 border border-slate-700" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md cursor-pointer"
+                >
+                  সংরক্ষণ করুন
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isAddingNew && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-slate-950 border border-slate-800 w-full max-w-lg p-6 rounded-3xl space-y-4 shadow-2xl my-8">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h3 className="text-base font-black text-white">নতুন ওষুধ যুক্ত করুন (ছবি সহ)</h3>
+              <button
+                onClick={() => setIsAddingNew(false)}
+                className="text-slate-400 hover:text-white font-black text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddNew} className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">ব্র্যান্ড নাম ও শক্তি</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={formBrand}
+                    onChange={(e) => setFormBrand(e.target.value)}
+                    placeholder="যেমন: Napa Extra"
+                    className="bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
+                    required
+                  />
+                  <input
+                    type="text"
+                    value={formStrength}
+                    onChange={(e) => setFormStrength(e.target.value)}
+                    placeholder="যেমন: 500mg"
+                    className="bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">জেনেরিক নাম</label>
+                <input
+                  type="text"
+                  value={formGeneric}
+                  onChange={(e) => setFormGeneric(e.target.value)}
+                  placeholder="যেমন: Paracetamol"
+                  className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">কোম্পানির নাম</label>
+                <input
+                  type="text"
+                  value={formCompany}
+                  onChange={(e) => setFormCompany(e.target.value)}
+                  placeholder="যেমন: Beximco Pharmaceuticals"
+                  className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">মূল্য (BDT)</label>
+                  <input
+                    type="text"
+                    value={formPrice}
+                    onChange={(e) => setFormPrice(e.target.value)}
+                    placeholder="যেমন: 2.50"
+                    className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">ক্যাটাগরি</label>
+                  <select
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value as CatalogItem["category"])}
+                    className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
+                  >
+                    <option value="Gastric">Gastric</option>
+                    <option value="Fever">Fever & Pain</option>
+                    <option value="Antibiotic">Antibiotic</option>
+                    <option value="Allergy">Allergy</option>
+                    <option value="Vitamin">Vitamin</option>
+                    <option value="Cardiac">Cardiac</option>
+                    <option value="Diabetes">Diabetes</option>
+                    <option value="Equipment">Medical Device</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">
+                  ছবি / Picture URL (অনলাইন ইমেজ লিঙ্ক)
+                </label>
+                <input
+                  type="url"
+                  value={formImageUrl}
+                  onChange={(e) => setFormImageUrl(e.target.value)}
+                  placeholder="https://example.com/medicine-image.jpg"
+                  className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
                 />
               </div>
 
               <div className="flex justify-end space-x-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setEditingMed(null)}
-                  className="bg-slate-800 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer"
+                  onClick={() => setIsAddingNew(false)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black cursor-pointer"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md cursor-pointer"
                 >
-                  ✓ সংরক্ষণ করুন
+                  ওষুধ সেভ করুন
                 </button>
               </div>
             </form>
