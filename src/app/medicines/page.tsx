@@ -11,44 +11,36 @@ import VoiceSearchModal from "@/components/features/VoiceSearchModal";
 import { normalizeVoiceQuery } from "@/lib/medical/voiceSearchHelper";
 import { MedicineCardSkeleton } from "@/components/ui/Skeleton";
 
-function MedicinePacketThumbnail({ item }: { item: CatalogItem }) {
+function MedicineCardThumbnail({ item }: { item: CatalogItem }) {
   const [imgErr, setImgErr] = useState(false);
 
-  const validImg =
-    item.imageUrl &&
-    !imgErr &&
-    !item.imageUrl.includes("scribd") &&
-    item.imageUrl.startsWith("http");
+  const cleanBrand = encodeURIComponent((item.brand || "").trim().toLowerCase());
+  const fallbackUrl = `https://medex.com.bd/cdn/img/medicines/${cleanBrand}.png`;
+  const imgSrc = item.imageUrl && !imgErr ? item.imageUrl : fallbackUrl;
 
-  if (validImg) {
-    return (
-      <div className="w-24 h-20 rounded-2xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+  return (
+    <div className="w-24 h-22 rounded-2xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-xs relative group-hover:border-emerald-500 transition">
+      {!imgErr ? (
         <img
-          src={item.imageUrl}
+          src={imgSrc}
           alt={item.brand}
+          referrerPolicy="no-referrer"
           onError={() => setImgErr(true)}
           className="max-h-full max-w-full object-contain group-hover:scale-105 transition"
         />
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-24 h-20 rounded-2xl bg-gradient-to-br from-white via-slate-50 to-emerald-50/80 border-2 border-emerald-600/30 p-2 flex flex-col justify-between shrink-0 shadow-xs relative overflow-hidden select-none">
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#0f4c3a] via-emerald-500 to-amber-500" />
-      <div className="flex justify-between items-center text-[8px] font-black text-slate-500 pt-0.5">
-        <span className="truncate uppercase text-[#0f4c3a]">{item.dosageForm}</span>
-        <span className="bg-emerald-100 text-emerald-900 px-1 rounded">PACK</span>
-      </div>
-      <div className="my-auto">
-        <div className="text-[11px] font-black text-slate-900 leading-tight truncate">
-          {item.brand}®
+      ) : (
+        <div className="w-full h-full rounded-xl bg-gradient-to-br from-emerald-800 to-teal-950 text-white p-1.5 flex flex-col justify-between">
+          <div className="text-[7px] font-black uppercase text-emerald-300 truncate">
+            {item.dosageForm}
+          </div>
+          <div className="text-center font-black text-[11px] leading-tight truncate">
+            {item.brand}
+          </div>
+          <div className="text-[7px] text-center text-slate-300 font-mono truncate">
+            {item.strength}
+          </div>
         </div>
-        <div className="text-[9px] text-amber-700 font-extrabold truncate">{item.strength}</div>
-      </div>
-      <div className="text-[7px] text-slate-500 font-bold truncate border-t border-slate-200/80 pt-0.5">
-        {item.company.split(" ")[0]}
-      </div>
+      )}
     </div>
   );
 }
@@ -85,7 +77,6 @@ function MedicinesCatalogContent() {
     const customSaved = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("jj_custom_medicines") || "[]") : [];
     const overrides = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("jj_medicine_overrides") || "{}") : {};
 
-    // Try loading full /data/all_medicines.json first, fallback to /api/medicines
     fetch("/data/all_medicines.json")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -95,16 +86,12 @@ function MedicinesCatalogContent() {
           );
           setCatalog(combined);
         } else {
-          return fetch("/api/medicines?limit=500")
-            .then((r) => (r.ok ? r.json() : null))
-            .then((apiData) => {
-              if (apiData && Array.isArray(apiData.items) && apiData.items.length > 0) {
-                setCatalog([...customSaved, ...apiData.items]);
-              }
-            });
+          setCatalog([...customSaved, ...MASTER_CATALOG]);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setCatalog([...customSaved, ...MASTER_CATALOG]);
+      })
       .finally(() => setIsLoadingExtended(false));
   }, []);
 
@@ -217,7 +204,7 @@ function MedicinesCatalogContent() {
                   setSearchQuery("");
                   router.replace("/medicines");
                 }}
-                className="text-slate-400 hover:text-rose-600 px-2.5 text-xs font-black"
+                className="text-slate-400 hover:text-rose-600 px-2.5 text-xs font-black cursor-pointer"
               >
                 ✕
               </button>
@@ -271,7 +258,7 @@ function MedicinesCatalogContent() {
                 className="premium-card bg-white rounded-3xl p-5 border border-slate-200/90 hover:border-[#0f4c3a] flex flex-col justify-between group cursor-pointer transition shadow-2xs hover:shadow-xl"
               >
                 <div className="flex items-start space-x-4">
-                  <MedicinePacketThumbnail item={med} />
+                  <MedicineCardThumbnail item={med} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
                       <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
@@ -307,7 +294,7 @@ function MedicinesCatalogContent() {
                 >
                   <div>
                     <span className="text-[10px] text-slate-400 block">
-                      Unit: ৳{unitP.toFixed(2)} • পাতা: ৳{stripP}
+                      পাতা (10's): ৳{stripP}
                     </span>
                     <span className="text-base font-black text-[#0f4c3a] font-mono">
                       BDT {unitP.toFixed(2)}
@@ -379,7 +366,7 @@ export default function MedicinesPage() {
   return (
     <div className="min-h-screen bg-[#f4f7f6] flex flex-col justify-between font-sans text-slate-800 pb-20 lg:pb-0">
       <PublicNavbar />
-      <Suspense fallback={<div className="p-12 text-center">Loading 35,941+ Medicines...</div>}>
+      <Suspense fallback={<div className="p-12 text-center font-bold">ঔষধ ডেটাবেজ লোড হচ্ছে...</div>}>
         <MedicinesCatalogContent />
       </Suspense>
     </div>
