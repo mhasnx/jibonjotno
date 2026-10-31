@@ -1,0 +1,39 @@
+﻿# JibonJotno — Git Ignore Configuration
+# Node.js dependency folder
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build ebong cache folder
+.next/
+out/
+build/
+dist/
+
+# Gopon password o environment file (SECURITY CRITICAL)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Local file storage o private prescription chobi (PRIVACY CRITICAL)
+storage/private-rx/*
+storage/public-uploads/*
+!storage/private-rx/.gitkeep
+!storage/public-uploads/.gitkeep
+
+# Test report ebong coverage file
+coverage/
+playwright-report/
+test-results/
+
+# Log ebong OS file
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+next-env.d.ts
