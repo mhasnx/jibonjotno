@@ -36,5 +36,8 @@
   },
   "engines": {
     "node": ">=24.0.0"
+  },
+  "overrides": {
+    "vite": "$vite"
   }
 }
