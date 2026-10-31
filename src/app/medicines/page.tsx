@@ -90,28 +90,26 @@ function MedicinesCatalogContent() {
 
   useEffect(() => {
     setIsLoadingExtended(true);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    fetch("/data/all_medicines.json", { signal: controller.signal })
+    // Fetch without strict 8-second abort timeout so full 107MB dataset can load smoothly
+    fetch("/data/all_medicines.json")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          setCatalog([...MASTER_CATALOG, ...data]);
+          setCatalog(data);
         }
       })
-      .catch(() => {
-        // Fallback to MASTER_CATALOG if needed
+      .catch((err) => {
+        console.error("Dataset fetch error:", err);
       })
       .finally(() => {
-        clearTimeout(timeoutId);
         setIsLoadingExtended(false);
       });
   }, []);
 
   const categories = [
     { id: "ALL", bn: "\u09b8\u09ac \u0995\u09cd\u09af\u09be\u099f\u09be\u0997\u09b0\u09bf", en: "All Items" },
-    { id: "Gastric", bn: "\u0997\u09cd\u09af\u09be\u09b8\u09cd\u099f\u09cd\u09b0\u09bf\u0995", en: "Gastric" },
+    { id: "Gastric", bn: "\u0997\u09cd\u09af\u09be\u09bb\u09b8\u09cd\u099f\u09cd\u09b0\u09bf\u0995", en: "Gastric" },
     { id: "Fever", bn: "\u099c\u09cd\u09ac\u09b0 \u0993 \u09ac\u09cd\u09af\u09be\u09a5\u09be", en: "Fever & Pain" },
     { id: "Antibiotic", bn: "\u0985\u09cd\u09af\u09be\u09a8\u09cd\u099f\u09bf\u09ac\u09be\u09df\u09cb\u099f\u09bf\u0995", en: "Antibiotics" },
     { id: "Allergy", bn: "\u0985\u09cd\u09af\u09be\u09b2\u09be\u09b0\u09cd\u099c\u09bf", en: "Allergy" },
