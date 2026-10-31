@@ -93,7 +93,7 @@ export default function AdminDashboardPage() {
     });
 
     setMedicines(updatedList);
-    setSuccessMsg(`"${formBrand}"-এর মূল্য, ছবি ও তথ্য আপডেট হয়েছে!`);
+    setSuccessMsg(`"${formBrand}"-à¦à¦° à¦®à§‚à¦²à§à¦¯, à¦›à¦¬à¦¿ à¦“ à¦¤à¦¥à§à¦¯ à¦†à¦ªà¦¡à§‡à¦Ÿ à¦¹à§Ÿà§‡à¦›à§‡!`);
     setEditingItem(null);
     setTimeout(() => setSuccessMsg(""), 3500);
   };
@@ -115,7 +115,7 @@ export default function AdminDashboardPage() {
 
     setMedicines([newItem, ...medicines]);
     setTotalCount((prev) => prev + 1);
-    setSuccessMsg(`নতুন ওষুধ "${formBrand}" সফলভাবে যুক্ত হয়েছে!`);
+    setSuccessMsg(`à¦¨à¦¤à§à¦¨ à¦“à¦·à§à¦§ "${formBrand}" à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦¯à§à¦•à§à¦¤ à¦¹à§Ÿà§‡à¦›à§‡!`);
     setIsAddingNew(false);
     resetForm();
     setTimeout(() => setSuccessMsg(""), 3500);
@@ -140,7 +140,7 @@ export default function AdminDashboardPage() {
           <span className="bg-emerald-600 text-white text-xs font-black px-3 py-1 rounded-lg uppercase tracking-wider">
             Super Admin Hub
           </span>
-          <h1 className="text-xl font-black text-white">জীবনযত্ন প্রশাসনিক পোর্টাল</h1>
+          <h1 className="text-xl font-black text-white">à¦œà§€à¦¬à¦¨à¦¯à¦¤à§à¦¨ à¦ªà§à¦°à¦¶à¦¾à¦¸à¦¨à¦¿à¦• à¦ªà§‹à¦°à§à¦Ÿà¦¾à¦²</h1>
         </div>
         <div className="flex items-center space-x-4">
           <a
@@ -148,13 +148,13 @@ export default function AdminDashboardPage() {
             target="_blank"
             className="text-xs font-bold text-slate-300 hover:text-emerald-400 transition"
           >
-            🌐 ভিজিট লাইভ সাইট
+            ðŸŒ à¦­à¦¿à¦œà¦¿à¦Ÿ à¦²à¦¾à¦‡à¦­ à¦¸à¦¾à¦‡à¦Ÿ
           </a>
           <button
             onClick={handleLogout}
             className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer shadow-sm"
           >
-            লগআউট করুন
+            à¦²à¦—à¦†à¦‰à¦Ÿ à¦•à¦°à§à¦¨
           </button>
         </div>
       </header>
@@ -162,21 +162,21 @@ export default function AdminDashboardPage() {
       <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 flex-1 w-full space-y-6">
         {successMsg && (
           <div className="bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 px-5 py-3 rounded-2xl text-sm font-bold flex items-center space-x-2">
-            <span>✓ {successMsg}</span>
+            <span>âœ“ {successMsg}</span>
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-sm flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-bold uppercase">মোট ওষুধ ডাটাবেজ</span>
+            <span className="text-xs text-slate-400 font-bold uppercase">à¦®à§‹à¦Ÿ à¦“à¦·à§à¦§ à¦¡à¦¾à¦Ÿà¦¾à¦¬à§‡à¦œ</span>
             <div className="text-3xl font-black text-emerald-400 font-mono mt-2">
               {totalCount.toLocaleString()} +
             </div>
-            <span className="text-[11px] text-slate-500 mt-1">সক্রিয় ক্যাটালগ আইটেম</span>
+            <span className="text-[11px] text-slate-500 mt-1">à¦¸à¦•à§à¦°à¦¿à¦¯à¦¼ à¦•à§à¦¯à¦¾à¦Ÿà¦¾à¦²à¦— à¦†à¦‡à¦Ÿà§‡à¦®</span>
           </div>
 
           <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-sm flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-bold uppercase">নতুন ওষুধ যুক্ত করুন</span>
+            <span className="text-xs text-slate-400 font-bold uppercase">à¦¨à¦¤à§à¦¨ à¦“à¦·à§à¦§ à¦¯à§à¦•à§à¦¤ à¦•à¦°à§à¦¨</span>
             <button
               onClick={() => {
                 resetForm();
@@ -185,24 +185,24 @@ export default function AdminDashboardPage() {
               }}
               className="mt-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black py-2.5 px-4 rounded-xl transition cursor-pointer shadow-md"
             >
-              + নতুন ওষুধ এন্ট্রি করুন
+              + à¦¨à¦¤à§à¦¨ à¦“à¦·à§à¦§ à¦à¦¨à§à¦Ÿà§à¦°à¦¿ à¦•à¦°à§à¦¨
             </button>
           </div>
 
           <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-sm flex flex-col justify-between">
-            <span className="text-xs text-slate-400 font-bold uppercase">এডমিন স্ট্যাটাস</span>
+            <span className="text-xs text-slate-400 font-bold uppercase">à¦à¦¡à¦®à¦¿à¦¨ à¦¸à§à¦Ÿà§à¦¯à¦¾à¦Ÿà¦¾à¦¸</span>
             <div className="text-sm font-black text-amber-400 mt-2 flex items-center space-x-1.5">
-              <span>🛡️ Full Edit & Picture Upload Active</span>
+              <span>ðŸ›¡ï¸ Full Edit & Picture Upload Active</span>
             </div>
-            <span className="text-[11px] text-slate-500 mt-1">অ্যাক্সেস লেভেল: সুপার অ্যাডমিন</span>
+            <span className="text-[11px] text-slate-500 mt-1">à¦…à§à¦¯à¦¾à¦•à§à¦¸à§‡à¦¸ à¦²à§‡à¦­à§‡à¦²: à¦¸à§à¦ªà¦¾à¦° à¦…à§à¦¯à¦¾à¦¡à¦®à¦¿à¦¨</span>
           </div>
         </div>
 
         <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl shadow-sm space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h2 className="text-lg font-black text-white">ওষুধের মূল্য, ছবি ও ক্যাটালগ ম্যানেজমেন্ট</h2>
-              <p className="text-xs text-slate-400">৩৫,৯৪১+ ডাটাবেজ থেকে যেকোনো ওষুধ খুঁজুন এবং এডিট করুন</p>
+              <h2 className="text-lg font-black text-white">à¦“à¦·à§à¦§à§‡à¦° à¦®à§‚à¦²à§à¦¯, à¦›à¦¬à¦¿ à¦“ à¦•à§à¦¯à¦¾à¦Ÿà¦¾à¦²à¦— à¦®à§à¦¯à¦¾à¦¨à§‡à¦œà¦®à§‡à¦¨à§à¦Ÿ</h2>
+              <p className="text-xs text-slate-400">à§©à§«,à§¯à§ªà§§+ à¦¡à¦¾à¦Ÿà¦¾à¦¬à§‡à¦œ à¦¥à§‡à¦•à§‡ à¦¯à§‡à¦•à§‹à¦¨à§‹ à¦“à¦·à§à¦§ à¦–à§à¦à¦œà§à¦¨ à¦à¦¬à¦‚ à¦à¦¡à¦¿à¦Ÿ à¦•à¦°à§à¦¨</p>
             </div>
             <div className="w-full md:w-96">
               <input
@@ -212,7 +212,7 @@ export default function AdminDashboardPage() {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="ওষুধ, জেনেরিক বা কোম্পানির নাম দিয়ে খুঁজুন..."
+                placeholder="à¦“à¦·à§à¦§, à¦œà§‡à¦¨à§‡à¦°à¦¿à¦• à¦¬à¦¾ à¦•à§‹à¦®à§à¦ªà¦¾à¦¨à¦¿à¦° à¦¨à¦¾à¦® à¦¦à¦¿à¦¯à¦¼à§‡ à¦–à§à¦à¦œà§à¦¨..."
                 className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-xs px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -222,25 +222,25 @@ export default function AdminDashboardPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 text-[11px] text-slate-400 uppercase tracking-wider">
-                  <th className="py-3 px-4">ছবি</th>
-                  <th className="py-3 px-4">ব্র্যান্ড ও শক্তি</th>
-                  <th className="py-3 px-4">জেনেরিক নাম</th>
-                  <th className="py-3 px-4">কোম্পানি</th>
-                  <th className="py-3 px-4">মূল্য (BDT)</th>
-                  <th className="py-3 px-4 text-right">অ্যাকশন</th>
+                  <th className="py-3 px-4">à¦›à¦¬à¦¿</th>
+                  <th className="py-3 px-4">à¦¬à§à¦°à§à¦¯à¦¾à¦¨à§à¦¡ à¦“ à¦¶à¦•à§à¦¤à¦¿</th>
+                  <th className="py-3 px-4">à¦œà§‡à¦¨à§‡à¦°à¦¿à¦• à¦¨à¦¾à¦®</th>
+                  <th className="py-3 px-4">à¦•à§‹à¦®à§à¦ªà¦¾à¦¨à¦¿</th>
+                  <th className="py-3 px-4">à¦®à§‚à¦²à§à¦¯ (BDT)</th>
+                  <th className="py-3 px-4 text-right">à¦…à§à¦¯à¦¾à¦•à¦¶à¦¨</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-xs">
                 {isLoading ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-slate-400">
-                      ডাটাবেজ লোড হচ্ছে...
+                      à¦¡à¦¾à¦Ÿà¦¾à¦¬à§‡à¦œ à¦²à§‹à¦¡ à¦¹à¦šà§à¦›à§‡...
                     </td>
                   </tr>
                 ) : medicines.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-slate-400">
-                      কোনো ওষুধ পাওয়া যায়নি।
+                      à¦•à§‹à¦¨à§‹ à¦“à¦·à§à¦§ à¦ªà¦¾à¦“à§Ÿà¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿à¥¤
                     </td>
                   </tr>
                 ) : (
@@ -266,14 +266,14 @@ export default function AdminDashboardPage() {
                       <td className="py-3.5 px-4 text-slate-300">{med.generic}</td>
                       <td className="py-3.5 px-4 text-slate-400">{med.company}</td>
                       <td className="py-3.5 px-4 font-mono font-black text-amber-300">
-                        ৳ {med.priceTk}
+                        à§³ {med.priceTk}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <button
                           onClick={() => startEditing(med)}
                           className="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer"
                         >
-                          ✏️ এডিট মূল্য/ছবি
+                          âœï¸ à¦à¦¡à¦¿à¦Ÿ à¦®à§‚à¦²à§à¦¯/à¦›à¦¬à¦¿
                         </button>
                       </td>
                     </tr>
@@ -293,13 +293,13 @@ export default function AdminDashboardPage() {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300 disabled:opacity-40"
               >
-                ← Prev
+                â† Prev
               </button>
               <button
                 onClick={() => setCurrentPage((p) => p + 1)}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs text-slate-300"
               >
-                Next →
+                Next â†’
               </button>
             </div>
           </div>
@@ -311,18 +311,18 @@ export default function AdminDashboardPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-slate-950 border border-slate-800 w-full max-w-lg p-6 rounded-3xl space-y-4 shadow-2xl my-8">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-base font-black text-white">ওষুধের তথ্য, মূল্য ও ছবি এডিট করুন</h3>
+              <h3 className="text-base font-black text-white">à¦“à¦·à§à¦§à§‡à¦° à¦¤à¦¥à§à¦¯, à¦®à§‚à¦²à§à¦¯ à¦“ à¦›à¦¬à¦¿ à¦à¦¡à¦¿à¦Ÿ à¦•à¦°à§à¦¨</h3>
               <button
                 onClick={() => setEditingItem(null)}
                 className="text-slate-400 hover:text-white font-black text-sm"
               >
-                ✕
+                âœ•
               </button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 block mb-1">ব্র্যান্ড নাম ও শক্তি</label>
+                <label className="text-xs text-slate-400 block mb-1">à¦¬à§à¦°à§à¦¯à¦¾à¦¨à§à¦¡ à¦¨à¦¾à¦® à¦“ à¦¶à¦•à§à¦¤à¦¿</label>
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
@@ -342,7 +342,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">জেনেরিক নাম</label>
+                <label className="text-xs text-slate-400 block mb-1">à¦œà§‡à¦¨à§‡à¦°à¦¿à¦• à¦¨à¦¾à¦®</label>
                 <input
                   type="text"
                   value={formGeneric}
@@ -353,7 +353,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">কোম্পানির নাম</label>
+                <label className="text-xs text-slate-400 block mb-1">à¦•à§‹à¦®à§à¦ªà¦¾à¦¨à¦¿à¦° à¦¨à¦¾à¦®</label>
                 <input
                   type="text"
                   value={formCompany}
@@ -365,7 +365,7 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">মূল্য (BDT)</label>
+                  <label className="text-xs text-slate-400 block mb-1">à¦®à§‚à¦²à§à¦¯ (BDT)</label>
                   <input
                     type="text"
                     value={formPrice}
@@ -375,7 +375,7 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">ক্যাটাগরি</label>
+                  <label className="text-xs text-slate-400 block mb-1">à¦•à§à¦¯à¦¾à¦Ÿà¦¾à¦—à¦°à¦¿</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
@@ -395,7 +395,7 @@ export default function AdminDashboardPage() {
 
               <div>
                 <label className="text-xs text-slate-400 block mb-1">
-                  ছবি / Picture URL (অনলাইন ইমেজ লিঙ্ক)
+                  à¦›à¦¬à¦¿ / Picture URL (à¦…à¦¨à¦²à¦¾à¦‡à¦¨ à¦‡à¦®à§‡à¦œ à¦²à¦¿à¦™à§à¦•)
                 </label>
                 <input
                   type="url"
@@ -406,7 +406,7 @@ export default function AdminDashboardPage() {
                 />
                 {formImageUrl && (
                   <div className="mt-2 flex items-center space-x-2">
-                    <span className="text-[10px] text-slate-400">লাইভ প্রিভিউ:</span>
+                    <span className="text-[10px] text-slate-400">à¦²à¦¾à¦‡à¦­ à¦ªà§à¦°à¦¿à¦­à¦¿à¦‰:</span>
                     <img src={formImageUrl} alt="Preview" className="w-9 h-9 object-contain rounded bg-white p-1 border border-slate-700" />
                   </div>
                 )}
@@ -418,13 +418,13 @@ export default function AdminDashboardPage() {
                   onClick={() => setEditingItem(null)}
                   className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold"
                 >
-                  বাতিল
+                  à¦¬à¦¾à¦¤à¦¿à¦²
                 </button>
                 <button
                   type="submit"
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md cursor-pointer"
                 >
-                  সংরক্ষণ করুন
+                  à¦¸à¦‚à¦°à¦•à§à¦·à¦£ à¦•à¦°à§à¦¨
                 </button>
               </div>
             </form>
@@ -437,24 +437,24 @@ export default function AdminDashboardPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-slate-950 border border-slate-800 w-full max-w-lg p-6 rounded-3xl space-y-4 shadow-2xl my-8">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-base font-black text-white">নতুন ওষুধ যুক্ত করুন (ছবি সহ)</h3>
+              <h3 className="text-base font-black text-white">à¦¨à¦¤à§à¦¨ à¦“à¦·à§à¦§ à¦¯à§à¦•à§à¦¤ à¦•à¦°à§à¦¨ (à¦›à¦¬à¦¿ à¦¸à¦¹)</h3>
               <button
                 onClick={() => setIsAddingNew(false)}
                 className="text-slate-400 hover:text-white font-black text-sm"
               >
-                ✕
+                âœ•
               </button>
             </div>
 
             <form onSubmit={handleAddNew} className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 block mb-1">ব্র্যান্ড নাম ও শক্তি</label>
+                <label className="text-xs text-slate-400 block mb-1">à¦¬à§à¦°à§à¦¯à¦¾à¦¨à§à¦¡ à¦¨à¦¾à¦® à¦“ à¦¶à¦•à§à¦¤à¦¿</label>
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
                     value={formBrand}
                     onChange={(e) => setFormBrand(e.target.value)}
-                    placeholder="যেমন: Napa Extra"
+                    placeholder="à¦¯à§‡à¦®à¦¨: Napa Extra"
                     className="bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
                     required
                   />
@@ -462,7 +462,7 @@ export default function AdminDashboardPage() {
                     type="text"
                     value={formStrength}
                     onChange={(e) => setFormStrength(e.target.value)}
-                    placeholder="যেমন: 500mg"
+                    placeholder="à¦¯à§‡à¦®à¦¨: 500mg"
                     className="bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
                     required
                   />
@@ -470,24 +470,24 @@ export default function AdminDashboardPage() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">জেনেরিক নাম</label>
+                <label className="text-xs text-slate-400 block mb-1">à¦œà§‡à¦¨à§‡à¦°à¦¿à¦• à¦¨à¦¾à¦®</label>
                 <input
                   type="text"
                   value={formGeneric}
                   onChange={(e) => setFormGeneric(e.target.value)}
-                  placeholder="যেমন: Paracetamol"
+                  placeholder="à¦¯à§‡à¦®à¦¨: Paracetamol"
                   className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">কোম্পানির নাম</label>
+                <label className="text-xs text-slate-400 block mb-1">à¦•à§‹à¦®à§à¦ªà¦¾à¦¨à¦¿à¦° à¦¨à¦¾à¦®</label>
                 <input
                   type="text"
                   value={formCompany}
                   onChange={(e) => setFormCompany(e.target.value)}
-                  placeholder="যেমন: Beximco Pharmaceuticals"
+                  placeholder="à¦¯à§‡à¦®à¦¨: Beximco Pharmaceuticals"
                   className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white"
                   required
                 />
@@ -495,18 +495,18 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">মূল্য (BDT)</label>
+                  <label className="text-xs text-slate-400 block mb-1">à¦®à§‚à¦²à§à¦¯ (BDT)</label>
                   <input
                     type="text"
                     value={formPrice}
                     onChange={(e) => setFormPrice(e.target.value)}
-                    placeholder="যেমন: 2.50"
+                    placeholder="à¦¯à§‡à¦®à¦¨: 2.50"
                     className="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-xl text-white font-mono"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">ক্যাটাগরি</label>
+                  <label className="text-xs text-slate-400 block mb-1">à¦•à§à¦¯à¦¾à¦Ÿà¦¾à¦—à¦°à¦¿</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
@@ -526,7 +526,7 @@ export default function AdminDashboardPage() {
 
               <div>
                 <label className="text-xs text-slate-400 block mb-1">
-                  ছবি / Picture URL (অনলাইন ইমেজ লিঙ্ক)
+                  à¦›à¦¬à¦¿ / Picture URL (à¦…à¦¨à¦²à¦¾à¦‡à¦¨ à¦‡à¦®à§‡à¦œ à¦²à¦¿à¦™à§à¦•)
                 </label>
                 <input
                   type="url"
@@ -543,13 +543,13 @@ export default function AdminDashboardPage() {
                   onClick={() => setIsAddingNew(false)}
                   className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold"
                 >
-                  বাতিল
+                  à¦¬à¦¾à¦¤à¦¿à¦²
                 </button>
                 <button
                   type="submit"
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md cursor-pointer"
                 >
-                  ওষুধ সেভ করুন
+                  à¦“à¦·à§à¦§ à¦¸à§‡à¦­ à¦•à¦°à§à¦¨
                 </button>
               </div>
             </form>

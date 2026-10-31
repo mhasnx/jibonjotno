@@ -4,38 +4,17 @@ import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { MASTER_CATALOG, CatalogItem } from "@/data/medicinesCatalog";
 
-type RoleType = "SUPER_ADMIN" | "ADMIN" | "MODERATOR" | "SELLER";
-
-interface ExtendedMedicine extends CatalogItem {
-  youtubeUrl?: string;
-}
-
-interface StaffMember {
-  id: string;
-  name: string;
-  email: string;
-  role: RoleType;
-  status: "Active" | "Invited";
-  invitedAt: string;
-}
-
 export default function FullAdminDashboard() {
-  const [activeTab, setActiveTab] = useState<"CATALOG" | "ADD_NEW" | "ROLES" | "ORDERS">("CATALOG");
-  const [currentUser, setCurrentUser] = useState<{ email: string; name: string; role: RoleType }>({
-    email: "mahmudulhm2003@gmail.com",
-    name: "Md Mahmudul Hassan",
-    role: "SUPER_ADMIN",
-  });
-
-  const [medicines, setMedicines] = useState<ExtendedMedicine[]>(MASTER_CATALOG);
-  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
+  const [activeTab, setActiveTab] = useState<"CATALOG" | "ADD_NEW" | "ROLES">("CATALOG");
+  const [medicines, setMedicines] = useState<CatalogItem[]>(MASTER_CATALOG as any);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
 
   // Edit State
-  const [editingMed, setEditingMed] = useState<ExtendedMedicine | null>(null);
+  const [editingMed, setEditingMed] = useState<any | null>(null);
   const [editBrand, setEditBrand] = useState("");
   const [editGeneric, setEditGeneric] = useState("");
   const [editCompany, setEditCompany] = useState("");
@@ -59,21 +38,6 @@ export default function FullAdminDashboard() {
   const [newYoutubeUrl, setNewYoutubeUrl] = useState("");
   const [newRx, setNewRx] = useState(false);
 
-  // Staff
-  const [staffList, setStaffList] = useState<StaffMember[]>([
-    {
-      id: "staff-1",
-      name: "Md Mahmudul Hassan",
-      email: "mahmudulhm2003@gmail.com",
-      role: "SUPER_ADMIN",
-      status: "Active",
-      invitedAt: "2026-10-01",
-    },
-  ]);
-  const [inviteName, setInviteName] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<RoleType>("ADMIN");
-
   const [toast, setToast] = useState("");
 
   const showToast = (msg: string) => {
@@ -82,41 +46,23 @@ export default function FullAdminDashboard() {
   };
 
   useEffect(() => {
-    const savedSession = localStorage.getItem("jj_admin_session");
-    if (savedSession) {
-      try {
-        setCurrentUser(JSON.parse(savedSession));
-      } catch {}
-    }
-
-    const savedStaff = localStorage.getItem("jj_admin_staff");
-    if (savedStaff) {
-      try {
-        const parsed = JSON.parse(savedStaff);
-        if (Array.isArray(parsed) && parsed.length > 0) setStaffList(parsed);
-      } catch {}
-    }
-
-    setIsLoadingCatalog(true);
+    setIsLoading(true);
     const customSaved = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("jj_custom_medicines") || "[]") : [];
     const priceOverrides = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("jj_medicine_overrides") || "{}") : {};
 
     fetch("/data/all_medicines.json")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        const baseList = Array.isArray(data) && data.length > 0 ? [...MASTER_CATALOG, ...data] : MASTER_CATALOG;
+        const baseList: any[] = Array.isArray(data) && data.length > 0 ? [...MASTER_CATALOG, ...data] : MASTER_CATALOG;
         const merged = baseList.map((item: any) =>
           priceOverrides[item.id] ? { ...item, ...priceOverrides[item.id] } : item
         );
-        setMedicines([...customSaved, ...merged]);
+        setMedicines([...customSaved, ...merged] as any);
       })
       .catch(() => {
-        const merged = MASTER_CATALOG.map((item) =>
-          priceOverrides[item.id] ? { ...item, ...priceOverrides[item.id] } : item
-        );
-        setMedicines([...customSaved, ...merged]);
+        setMedicines([...customSaved, ...MASTER_CATALOG] as any);
       })
-      .finally(() => setIsLoadingCatalog(false));
+      .finally(() => setIsLoading(false));
   }, []);
 
   const handleLogout = () => {
@@ -126,46 +72,44 @@ export default function FullAdminDashboard() {
     window.location.href = "/admin-login";
   };
 
-  const filteredMedicines = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return medicines.filter((item) => {
-      if (selectedCategory !== "ALL" && item.category?.toLowerCase() !== selectedCategory.toLowerCase()) {
-        return false;
-      }
+    return medicines.filter((m: any) => {
+      if (selectedCategory !== "ALL" && (m.category || "").toLowerCase() !== selectedCategory.toLowerCase()) return false;
       if (!q) return true;
       return (
-        item.brand?.toLowerCase().includes(q) ||
-        item.generic?.toLowerCase().includes(q) ||
-        item.company?.toLowerCase().includes(q)
+        (m.brand || "").toLowerCase().includes(q) ||
+        (m.generic || "").toLowerCase().includes(q) ||
+        (m.company || "").toLowerCase().includes(q)
       );
     });
   }, [medicines, searchQuery, selectedCategory]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredMedicines.length / itemsPerPage));
-  const paginatedMedicines = useMemo(() => {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const paginated = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredMedicines.slice(start, start + itemsPerPage);
-  }, [filteredMedicines, currentPage]);
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage]);
 
-  const openEditModal = (med: ExtendedMedicine) => {
+  const openEdit = (med: any) => {
     setEditingMed(med);
-    setEditBrand(med.brand);
-    setEditGeneric(med.generic);
-    setEditCompany(med.company);
-    setEditStrength(med.strength);
+    setEditBrand(med.brand || "");
+    setEditGeneric(med.generic || "");
+    setEditCompany(med.company || "");
+    setEditStrength(med.strength || "");
     setEditDosage(med.dosageForm || "Tablet");
     setEditCategory(med.category || "Gastric");
-    setEditPrice(med.priceTk);
+    setEditPrice(med.priceTk || "5.00");
     setEditImageUrl(med.imageUrl || "");
     setEditYoutubeUrl(med.youtubeUrl || "");
     setEditRx(Boolean(med.requiresRx));
   };
 
-  const handleSaveMedicineEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMed) return;
 
-    const updatedItem: ExtendedMedicine = {
+    const updated = {
       ...editingMed,
       brand: editBrand,
       generic: editGeneric,
@@ -179,19 +123,18 @@ export default function FullAdminDashboard() {
       requiresRx: editRx,
     };
 
-    setMedicines((prev) => prev.map((m) => (m.id === editingMed.id ? updatedItem : m)));
-
+    setMedicines((prev: any[]) => prev.map((m) => (m.id === editingMed.id ? updated : m)));
     const overrides = JSON.parse(localStorage.getItem("jj_medicine_overrides") || "{}");
-    overrides[editingMed.id] = updatedItem;
+    overrides[editingMed.id] = updated;
     localStorage.setItem("jj_medicine_overrides", JSON.stringify(overrides));
 
     setEditingMed(null);
-    showToast(`✓ "${updatedItem.brand}" er price, info o YouTube video link save hoyeche!`);
+    showToast(`✓ "${updated.brand}" এর তথ্য, মূল্য ও YouTube লিংক সফলভাবে সংরক্ষিত হয়েছে!`);
   };
 
-  const handleAddNewMedicine = (e: React.FormEvent) => {
+  const handleAddNew = (e: React.FormEvent) => {
     e.preventDefault();
-    const newItem: ExtendedMedicine = {
+    const newItem = {
       id: "jj-med-" + Date.now(),
       brand: newBrand,
       generic: newGeneric,
@@ -205,10 +148,9 @@ export default function FullAdminDashboard() {
       requiresRx: newRx,
     };
 
-    setMedicines((prev) => [newItem, ...prev]);
-
-    const existingCustom = JSON.parse(localStorage.getItem("jj_custom_medicines") || "[]");
-    localStorage.setItem("jj_custom_medicines", JSON.stringify([newItem, ...existingCustom]));
+    setMedicines((prev: any[]) => [newItem, ...prev]);
+    const existing = JSON.parse(localStorage.getItem("jj_custom_medicines") || "[]");
+    localStorage.setItem("jj_custom_medicines", JSON.stringify([newItem, ...existing]));
 
     setNewBrand("");
     setNewGeneric("");
@@ -218,7 +160,7 @@ export default function FullAdminDashboard() {
     setNewImageUrl("");
     setNewYoutubeUrl("");
     setActiveTab("CATALOG");
-    showToast(`✓ Notun medicine "${newItem.brand}" catalog-e add hoyeche!`);
+    showToast(`✓ নতুন ওষুধ "${newItem.brand}" ডাটাবেজে যুক্ত হয়েছে!`);
   };
 
   return (
@@ -229,16 +171,11 @@ export default function FullAdminDashboard() {
             জ
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                {currentUser.role}
-              </span>
-              <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-                {currentUser.email}
-              </span>
-            </div>
+            <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase border border-emerald-500/30">
+              SUPER ADMIN HUB
+            </span>
             <h1 className="text-lg md:text-xl font-black text-white mt-0.5">
-              JibonJotno Admin Control Center
+              জীবনযত্ন প্রশাসনিক পোর্টাল
             </h1>
           </div>
         </div>
@@ -246,44 +183,35 @@ export default function FullAdminDashboard() {
         <div className="flex items-center gap-2.5">
           <Link
             href="/medicines"
-            className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-200 border border-emerald-700/50 text-xs font-bold px-3.5 py-2 rounded-xl transition"
+            className="bg-emerald-950 hover:bg-emerald-900 text-emerald-200 border border-emerald-700/50 text-xs font-bold px-3.5 py-2 rounded-xl transition"
           >
-            💊 Public Medicines
-          </Link>
-          <Link
-            href="/"
-            className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3.5 py-2 rounded-xl transition"
-          >
-            🌐 Live Website
+            💊 পাবলিক ক্যাটালগ
           </Link>
           <button
             onClick={handleLogout}
             className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-black px-4 py-2 rounded-xl transition cursor-pointer shadow-md"
           >
-            Logout
+            লগআউট
           </button>
         </div>
       </header>
 
       {toast && (
-        <div className="fixed bottom-6 right-6 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl text-xs font-black z-50 border border-emerald-400">
+        <div className="fixed bottom-6 right-6 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-black z-50">
           {toast}
         </div>
       )}
 
       <div className="bg-[#091915] border-b border-emerald-950 px-4 md:px-8 py-3 flex items-center gap-2 overflow-x-auto">
         {[
-          { id: "CATALOG", label: "💊 Medicine, Price & YouTube Video Editor" },
-          { id: "ADD_NEW", label: "➕ Notun Medicine Add Korun" },
-          { id: "ROLES", label: "👥 Admin Email Invite & Roles" },
+          { id: "CATALOG", label: "💊 ওষুধ মূল্য, ছবি ও YouTube ভিডিও এডিটর" },
+          { id: "ADD_NEW", label: "➕ নতুন ওষুধ ও ভিডিও যোগ করুন" },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black shrink-0 transition cursor-pointer ${
-              activeTab === tab.id
-                ? "bg-emerald-500 text-slate-950 shadow-md"
-                : "bg-slate-900/90 text-slate-300 hover:bg-slate-800"
+            className={`px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer ${
+              activeTab === tab.id ? "bg-emerald-500 text-slate-950" : "bg-slate-900 text-slate-300 hover:bg-slate-800"
             }`}
           >
             {tab.label}
@@ -297,41 +225,39 @@ export default function FullAdminDashboard() {
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
                 <h2 className="text-lg font-black text-white">
-                  Medicine Catalog & Price/YouTube Video Editor
+                  সম্পূর্ণ ওষুধ তালিকা ও মাল্টিমিডিয়া এডিটর
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Total Medicines: {medicines.length.toLocaleString()}+ | Edit Price, Packaging & YouTube Video Hyperlink
+                  মোট ডেটাবেজ: <strong className="text-emerald-400">{medicines.length.toLocaleString()}</strong> টি ওষুধ
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Brand ba Generic search korun..."
-                  className="w-full sm:w-80 bg-[#071310] border border-emerald-800/80 text-white text-xs px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-400"
-                />
-              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="ব্র্যান্ড বা জেনেরিক খুঁজুন..."
+                className="w-full sm:w-80 bg-[#071310] border border-emerald-800/80 text-white text-xs px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-400"
+              />
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-emerald-900/60 text-[11px] text-slate-400 uppercase">
-                    <th className="py-3.5 px-4">Brand & Strength</th>
-                    <th className="py-3.5 px-4">Generic Name</th>
-                    <th className="py-3.5 px-4">Company</th>
-                    <th className="py-3.5 px-4">Unit Price (BDT)</th>
-                    <th className="py-3.5 px-4">YouTube Video</th>
-                    <th className="py-3.5 px-4 text-right">Action</th>
+                    <th className="py-3.5 px-4">ব্র্যান্ড ও শক্তি</th>
+                    <th className="py-3.5 px-4">জেনেরিক নাম</th>
+                    <th className="py-3.5 px-4">কোম্পানি</th>
+                    <th className="py-3.5 px-4">মূল্য (BDT)</th>
+                    <th className="py-3.5 px-4">YouTube ভিডিও</th>
+                    <th className="py-3.5 px-4 text-right">অ্যাকশন</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-emerald-950/80 text-xs">
-                  {paginatedMedicines.map((med) => (
+                  {paginated.map((med: any) => (
                     <tr key={med.id} className="hover:bg-emerald-950/30 transition">
                       <td className="py-3.5 px-4">
                         <div className="font-black text-white text-sm">
@@ -341,29 +267,27 @@ export default function FullAdminDashboard() {
                       </td>
                       <td className="py-3.5 px-4 text-slate-300">{med.generic}</td>
                       <td className="py-3.5 px-4 text-slate-400">{med.company}</td>
-                      <td className="py-3.5 px-4 font-mono font-black text-amber-400 text-sm">
-                        ৳ {med.priceTk}
-                      </td>
+                      <td className="py-3.5 px-4 font-mono font-black text-amber-400">৳ {med.priceTk}</td>
                       <td className="py-3.5 px-4">
                         {med.youtubeUrl ? (
                           <a
                             href={med.youtubeUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 bg-red-600/20 text-red-400 hover:text-white hover:bg-red-600 border border-red-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full transition"
+                            className="bg-red-600/20 text-red-400 border border-red-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 hover:bg-red-600 hover:text-white transition"
                           >
-                            ▶ Watch Video
+                            ▶ ভিডিও লিংক
                           </a>
                         ) : (
-                          <span className="text-[10px] text-slate-600">No Video</span>
+                          <span className="text-[10px] text-slate-600">নাই</span>
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <button
-                          onClick={() => openEditModal(med)}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl font-black transition cursor-pointer"
+                          onClick={() => openEdit(med)}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-bold transition cursor-pointer"
                         >
-                          ✏️ Edit Info & Video
+                          ✏️ এডিট তথ্য ও ভিডিও
                         </button>
                       </td>
                     </tr>
@@ -375,25 +299,25 @@ export default function FullAdminDashboard() {
             {totalPages > 1 && (
               <div className="flex justify-between items-center pt-4 border-t border-emerald-900/40">
                 <span className="text-xs text-slate-400">
-                  Total: <strong className="text-white">{filteredMedicines.length}</strong> items
+                  ফলাফল: <strong className="text-white">{filtered.length}</strong> টি
                 </span>
                 <div className="flex items-center space-x-2">
                   <button
                     disabled={currentPage <= 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-xs font-bold disabled:opacity-40 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-xs font-bold disabled:opacity-40"
                   >
-                    ← Prev
+                    ← পূর্ববর্তী
                   </button>
-                  <span className="text-xs font-mono bg-[#071310] px-3.5 py-1.5 rounded-xl border border-emerald-900">
-                    Page {currentPage} / {totalPages}
+                  <span className="text-xs font-mono bg-[#071310] px-3 py-1.5 rounded-xl border border-emerald-900">
+                    {currentPage} / {totalPages}
                   </span>
                   <button
                     disabled={currentPage >= totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-xs font-bold disabled:opacity-40 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-xs font-bold disabled:opacity-40"
                   >
-                    Next →
+                    পরবর্তী →
                   </button>
                 </div>
               </div>
@@ -401,30 +325,29 @@ export default function FullAdminDashboard() {
           </div>
         )}
 
-        {/* Add New Tab */}
         {activeTab === "ADD_NEW" && (
           <div className="bg-[#0b1f1a] border border-emerald-900/50 rounded-3xl p-6 max-w-3xl mx-auto space-y-5 shadow-xl">
-            <h2 className="text-lg font-black text-white">➕ Notun Medicine & YouTube Video Add Korun</h2>
-            <form onSubmit={handleAddNewMedicine} className="space-y-4">
+            <h2 className="text-lg font-black text-white">➕ নতুন ওষুধ ও YouTube ভিডিও যোগ করুন</h2>
+            <form onSubmit={handleAddNew} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">Brand Name *</label>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">ব্র্যান্ড নাম *</label>
                   <input
                     type="text"
                     value={newBrand}
                     onChange={(e) => setNewBrand(e.target.value)}
-                    placeholder="e.g. Napa Extend"
+                    placeholder="যেমন: Napa Extend"
                     required
                     className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">Strength *</label>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">শক্তি (Strength) *</label>
                   <input
                     type="text"
                     value={newStrength}
                     onChange={(e) => setNewStrength(e.target.value)}
-                    placeholder="e.g. 665 mg"
+                    placeholder="যেমন: 665 mg"
                     required
                     className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
                   />
@@ -433,23 +356,23 @@ export default function FullAdminDashboard() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">Generic Name *</label>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">জেনেরিক নাম *</label>
                   <input
                     type="text"
                     value={newGeneric}
                     onChange={(e) => setNewGeneric(e.target.value)}
-                    placeholder="e.g. Paracetamol"
+                    placeholder="যেমন: Paracetamol"
                     required
                     className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">Company Name *</label>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">কোম্পানির নাম *</label>
                   <input
                     type="text"
                     value={newCompany}
                     onChange={(e) => setNewCompany(e.target.value)}
-                    placeholder="e.g. Beximco Pharmaceuticals"
+                    placeholder="যেমন: Beximco Pharmaceuticals Ltd."
                     required
                     className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
                   />
@@ -458,18 +381,18 @@ export default function FullAdminDashboard() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-300 font-bold block mb-1">Unit Price (BDT) *</label>
+                  <label className="text-xs text-slate-300 font-bold block mb-1">ইউনিট মূল্য (BDT) *</label>
                   <input
                     type="text"
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
-                    placeholder="e.g. 2.00"
+                    placeholder="যেমন: 2.00"
                     required
                     className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-amber-300 font-mono font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-red-400 font-bold block mb-1">▶ YouTube Video Link (URL)</label>
+                  <label className="text-xs text-red-400 font-bold block mb-1">▶ YouTube ভিডিও লিঙ্ক (ঐচ্ছিক)</label>
                   <input
                     type="url"
                     value={newYoutubeUrl}
@@ -480,48 +403,37 @@ export default function FullAdminDashboard() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs text-slate-300 font-bold block mb-1">Packaging Image URL</label>
-                <input
-                  type="url"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
-                />
-              </div>
-
               <button
                 type="submit"
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 rounded-xl text-xs cursor-pointer shadow-lg"
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 rounded-xl text-xs transition cursor-pointer shadow-lg"
               >
-                ✓ Medicine & Video Save Korun
+                ✓ ওষুধ ও তথ্য সংরক্ষণ করুন
               </button>
             </form>
           </div>
         )}
       </main>
 
-      {/* Edit Modal with YouTube URL input */}
+      {/* Edit Modal */}
       {editingMed && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-[#0b1f1a] border border-emerald-700/60 w-full max-w-xl p-6 rounded-3xl space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-emerald-900 pb-3">
               <h3 className="text-base font-black text-white">
-                ✏️ Edit Medicine & YouTube Video ({editingMed.brand})
+                ✏️ ওষুধের তথ্য ও YouTube লিংক এডিট ({editingMed.brand})
               </h3>
               <button
                 onClick={() => setEditingMed(null)}
-                className="text-slate-400 hover:text-white font-black text-sm cursor-pointer"
+                className="text-slate-400 hover:text-white font-black text-sm"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveMedicineEdit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Brand Name</label>
+                  <label className="text-xs text-slate-300 block mb-1">ব্র্যান্ড নাম</label>
                   <input
                     type="text"
                     value={editBrand}
@@ -531,7 +443,7 @@ export default function FullAdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Strength</label>
+                  <label className="text-xs text-slate-300 block mb-1">শক্তি</label>
                   <input
                     type="text"
                     value={editStrength}
@@ -542,9 +454,9 @@ export default function FullAdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Generic Name</label>
+                  <label className="text-xs text-slate-300 block mb-1">জেনেরিক নাম</label>
                   <input
                     type="text"
                     value={editGeneric}
@@ -554,7 +466,7 @@ export default function FullAdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-300 block mb-1">Company Name</label>
+                  <label className="text-xs text-slate-300 block mb-1">কোম্পানির নাম</label>
                   <input
                     type="text"
                     value={editCompany}
@@ -566,7 +478,7 @@ export default function FullAdminDashboard() {
               </div>
 
               <div>
-                <label className="text-xs text-amber-300 font-bold block mb-1">Unit Price (BDT)</label>
+                <label className="text-xs text-amber-300 font-bold block mb-1">ইউনিট মূল্য (BDT)</label>
                 <input
                   type="text"
                   value={editPrice}
@@ -576,7 +488,6 @@ export default function FullAdminDashboard() {
                 />
               </div>
 
-              {/* YouTube Video Hyperlink Field */}
               <div className="bg-red-950/30 border border-red-800/50 p-3.5 rounded-2xl space-y-1.5">
                 <label className="text-xs text-red-300 font-black flex items-center gap-1.5">
                   <span>▶</span> YouTube Video Hyperlink / Guide URL
@@ -586,20 +497,7 @@ export default function FullAdminDashboard() {
                   value={editYoutubeUrl}
                   onChange={(e) => setEditYoutubeUrl(e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full bg-[#071310] border border-red-700/70 text-xs p-3 rounded-xl text-white font-mono focus:outline-none focus:border-red-400"
-                />
-                <span className="text-[10px] text-slate-400 block">
-                  Eikhane YouTube video link dile public details modal-e user-ra shorasori video play kore dekhte parbe.
-                </span>
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-300 block mb-1">Packaging Image URL</label>
-                <input
-                  type="text"
-                  value={editImageUrl}
-                  onChange={(e) => setEditImageUrl(e.target.value)}
-                  className="w-full bg-[#071310] border border-emerald-800 text-xs p-3 rounded-xl text-white"
+                  className="w-full bg-[#071310] border border-red-700/70 text-xs p-3 rounded-xl text-white font-mono focus:outline-none"
                 />
               </div>
 
@@ -607,15 +505,15 @@ export default function FullAdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setEditingMed(null)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer"
+                  className="bg-slate-800 text-slate-300 px-4 py-2.5 rounded-xl text-xs font-bold"
                 >
-                  Cancel
+                  বাতিল
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black shadow-lg cursor-pointer"
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 rounded-xl text-xs font-black"
                 >
-                  ✓ Save Changes
+                  ✓ সংরক্ষণ করুন
                 </button>
               </div>
             </form>
